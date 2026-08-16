@@ -6,9 +6,9 @@
 [![License](https://img.shields.io/github/license/younghwan91/krx-news-rest-api)](https://github.com/younghwan91/krx-news-rest-api/blob/main/LICENSE)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-younghwan--chae-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/younghwan-chae/)
 
-한국 주식시장 뉴스와 공시 정보를 다양한 매체에서 자동 수집하여 제공하는 REST API입니다.
+한국 주식시장의 뉴스와 공시를 여러 매체에서 자동으로 모아 제공하는 REST API입니다.
 
-백그라운드 스케줄러가 주기적으로 뉴스를 크롤링하여 Redis에 캐싱하고, API 요청 시 캐시에서 즉시 응답하는 **캐시 우선(cache-first)** 아키텍처로 설계되었습니다.
+백그라운드 스케줄러가 주기적으로 뉴스를 크롤링해 Redis에 캐싱하므로, 요청이 오면 크롤링을 기다리지 않고 캐시에서 즉시 응답합니다 — **캐시 우선(cache-first)** 구조입니다.
 
 ## 주요 기능
 
@@ -363,7 +363,7 @@ ruff format src/ tests/
 ### 새 뉴스 소스 추가하기
 
 1. `models/schemas.py`의 `NewsSource` enum에 소스 추가
-2. `scrapers/` 디렉토리에 새 스크래퍼 파일 생성 (`BaseScraper` 상속)
+2. `scrapers/` 디렉터리에 새 스크래퍼 파일 생성 (`BaseScraper` 상속)
 3. `scrape_news()` 및/또는 `scrape_disclosures()` 구현
 4. `services/scheduler.py`의 `get_scrapers()`에 등록
 
@@ -412,7 +412,7 @@ CORS_ORIGINS=["https://yourdomain.com"]
 
 ## 예제 코드
 
-`examples/` 디렉토리에 바로 실행 가능한 예제가 포함되어 있습니다.
+`examples/` 디렉터리에 바로 실행 가능한 예제가 포함되어 있습니다.
 
 | 파일 | 설명 |
 |------|------|
