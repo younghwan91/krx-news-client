@@ -4,6 +4,10 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
+    environment:
+      # .env 의 REDIS_URL 은 로컬 실행용(localhost)이다. 컨테이너 안에서 localhost 는
+      # 자기 자신이므로 여기서 compose 서비스 이름으로 덮어쓴다.
+      REDIS_URL: redis://redis:6379
     depends_on:
       redis:
         condition: service_healthy
