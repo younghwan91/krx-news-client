@@ -1,7 +1,9 @@
 """종목 알림 예제.
 
-관심 종목의 뉴스/공시를 감시하고 새 항목이 발견되면 알림을 출력합니다.
-실제 서비스에서는 Slack, Telegram, Discord 웹훅으로 교체하세요.
+관심 종목 키워드가 포함된 토스 뉴스를 주기적으로 확인하고 새 항목이 있으면
+알림을 출력합니다. 실제 서비스에서는 send_alert()를 Slack/Telegram/Discord
+웹훅으로 교체하세요. (DART 공시를 함께 보려면 DartScraper(api_key=...)를
+추가로 호출하면 됩니다.)
 """
 
 from __future__ import annotations
@@ -9,9 +11,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 
-import httpx
-
-BASE_URL = "http://localhost:8000/api/v1"
+from krx_news_client import NewsArticle, TossScraper
 
 
 @dataclass
@@ -31,68 +31,46 @@ WATCHLIST: list[WatchItem] = [
 ]
 
 
-async def check_disclosures(client: httpx.AsyncClient, item: WatchItem) -> list[dict]:
-    """종목 공시 확인."""
-    resp = await client.get(f"/disclosure/{item.ticker}", params={"page_size": 5})
-    if resp.status_code == 200:
-        return resp.json().get("items", [])
-    return []
+def matches(article: NewsArticle, item: WatchItem) -> bool:
+    if item.ticker in article.tickers:
+        return True
+    return any(kw in article.title for kw in item.keywords)
 
 
-async def check_news(client: httpx.AsyncClient, item: WatchItem) -> list[dict]:
-    """종목 관련 뉴스 검색."""
-    all_results = []
-    for kw in item.keywords:
-        resp = await client.get("/news/search", params={"q": kw, "page_size": 5})
-        if resp.status_code == 200:
-            all_results.extend(resp.json().get("items", []))
-
-    # 중복 제거
-    seen = set()
-    unique = []
-    for article in all_results:
-        if article["id"] not in seen:
-            seen.add(article["id"])
-            unique.append(article)
-    return unique
-
-
-def send_alert(item_name: str, alert_type: str, title: str, url: str) -> None:
+def send_alert(item_name: str, title: str, url: str) -> None:
     """알림 전송 (콘솔 출력). 실제로는 Slack/Telegram 웹훅으로 교체."""
-    emoji = "📋" if alert_type == "공시" else "📰"
-    print(f"{emoji} [{item_name}] {alert_type}: {title}")
-    print(f"   🔗 {url}\n")
+    print(f"📰 [{item_name}] {title}\n   🔗 {url}\n")
 
 
 async def run_alert_loop(interval: int = 60) -> None:
-    """메인 감시 루프."""
+    """메인 감시 루프 — 매 주기마다 토스 뉴스를 다시 가져와 관심 종목과 대조한다."""
     seen_ids: set[str] = set()
     names = ", ".join(w.name for w in WATCHLIST)
     print(f"📡 종목 알림 시작: {names}")
     print(f"   갱신 주기: {interval}초 | Ctrl+C로 종료\n")
 
-    async with httpx.AsyncClient(base_url=BASE_URL, timeout=10) as client:
+    scraper = TossScraper()
+    try:
         while True:
-            for item in WATCHLIST:
-                try:
-                    # 공시 확인
-                    disclosures = await check_disclosures(client, item)
-                    for d in disclosures:
-                        if d["id"] not in seen_ids:
-                            seen_ids.add(d["id"])
-                            send_alert(item.name, "공시", d["title"], d["url"])
+            try:
+                articles = await scraper.scrape_news()
+            except Exception as e:  # noqa: BLE001 — 한 주기 실패해도 다음 주기에 계속
+                print(f"⚠️  뉴스 조회 실패: {e}")
+                await asyncio.sleep(interval)
+                continue
 
-                    # 뉴스 확인
-                    news = await check_news(client, item)
-                    for n in news:
-                        if n["id"] not in seen_ids:
-                            seen_ids.add(n["id"])
-                            send_alert(item.name, "뉴스", n["title"], n["url"])
-
-                except httpx.HTTPError as e:
-                    print(f"⚠️  {item.name} 조회 실패: {e}")
+            for article in articles:
+                if article.id in seen_ids:
+                    continue
+                for item in WATCHLIST:
+                    if matches(article, item):
+                        seen_ids.add(article.id)
+                        send_alert(item.name, article.title, article.url)
+                        break
 
             await asyncio.sleep(interval)
+    finally:
+        await scraper.close()
 
 
 if __name__ == "__main__":
