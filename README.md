@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/younghwan91/krx-news-client)](https://github.com/younghwan91/krx-news-client/blob/main/LICENSE)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-younghwan--chae-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/younghwan-chae/)
 
-**한국 주식시장의 뉴스·공시를 4개 매체에서 모아 하나의 스키마로 내주는 Python 클라이언트 라이브러리** — DART, 한국경제, 더벨, 토스증권.
+**한국 주식시장의 뉴스·공시를 모아 하나의 스키마로 내주는 Python 클라이언트 라이브러리** — DART, 토스증권.
 
 매체마다 HTML 구조도 갱신 주기도 제각각이라, 뉴스를 쓰려는 쪽이 매번 크롤러를 다시 짜게 된다. 그 일을 한 번만 하려고 만들었다. [kiwoom-client](https://github.com/younghwan91/kiwoom-client)와 같은 성격의 라이브러리다 — 서버를 띄우지 않고, 호출한 프로세스 안에서 그때그때 매체에 직접 요청해 정규화된 결과를 돌려준다.
 
@@ -49,8 +49,6 @@ disclosures = await scraper.scrape_disclosures()
 | 소스 | 데이터 | 수집 방식 |
 |---|---|---|
 | DART (dart.fss.or.kr) | 공시 | 공식 Open API (키 필요) |
-| 한국경제 (hankyung.com) | 뉴스 | HTML 크롤링 |
-| 더벨 (thebell.co.kr) | 뉴스 | HTML 크롤링 |
 | 토스증권 (tossinvest.com) | 뉴스 | 비공식 내부 API |
 
 수집한 기사는 매체와 무관하게 `NewsArticle`, 공시는 `Disclosure` 한 벌로 정규화한다. 소스가 늘어도 호출 코드는 그대로다.
@@ -62,7 +60,7 @@ disclosures = await scraper.scrape_disclosures()
 | 필드 | 설명 |
 |---|---|
 | `id` | 고유 ID (`{source}:{url의 md5 12자}`) |
-| `source` | 소스 (`dart`/`hankyung`/`thebell`/`toss`) |
+| `source` | 소스 (`dart`/`toss`) |
 | `category` | `disclosure`/`market`/`stock`/`economy`/`analysis`/`breaking` |
 | `title` | 제목 |
 | `url` | 원문 링크 |
@@ -116,7 +114,8 @@ Apache License 2.0 — 전문은 [LICENSE](LICENSE) 참조.
 | 축 | 프로젝트 | 설명 |
 |---|---|---|
 | 🇰🇷 한국 주식 | **[kiwoom-client](https://github.com/younghwan91/kiwoom-client)** | 키움증권 REST API Python 라이브러리 — 국내주식 엔드포인트 전수·실시간 WebSocket, sync + async (`pip install kiwoom-client`) |
-| 🇰🇷 한국 주식 | **[krx-fundamentals-api](https://github.com/younghwan91/krx-fundamentals-api)** | 국내 기업 펀더멘탈 REST API — 재무제표·투자지표·배당·종목 스크리닝 (DART + KRX + 네이버) |
+| 🇰🇷 한국 주식 | **[krx-fundamentals-client](https://github.com/younghwan91/krx-fundamentals-client)** | 국내 기업 펀더멘탈 Python 클라이언트 라이브러리 — 재무제표·투자지표·배당·종목 스크리닝 (DART + KRX + 네이버) |
+| 🇰🇷 한국 주식 | **[fin-checkup](https://github.com/younghwan91/fin-checkup)** | 관심종목 위험 공시 텔레그램 알림 + DART·SEC 재무 건강검진 — 측정값과 사실만 전달한다 |
 | 🇰🇷 한국 주식 | **[quant-airflow](https://github.com/younghwan91/quant-airflow)** | 시세·수급·실적을 TimescaleDB 로 수집하는 Airflow 파이프라인 — 상장폐지 종목까지 담아 생존편향을 막는다 |
 | 🇰🇷 한국 주식 | **[kr-quant](https://github.com/younghwan91/kr-quant)** | 코스피·코스닥 알파 리서치 — walk-forward·랜덤 음성대조·purged CV·Deflated Sharpe 를 CI 가드레일로 강제 |
 | 🇺🇸 미국 주식 | **[portfolio-research](https://github.com/younghwan91/portfolio-research)** | 미국주식 팩터 엔진 — point-in-time·생존편향 보정 데이터 위에서 walk-forward 를 Deflated Sharpe·PBO 로 게이팅 (+ ETF 전술배분 TAA — 9개 사전등록, 채택 0) |

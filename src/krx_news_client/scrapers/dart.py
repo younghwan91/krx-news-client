@@ -10,6 +10,19 @@ logger = logging.getLogger(__name__)
 
 DETAIL_URL = "https://dart.fss.or.kr/dsaf001/main.do?rcept_no={rcept_no}"
 
+#: DART 응답 status. 일한도 소진 시 이 값이 온다.
+QUOTA_EXHAUSTED_STATUS = "020"
+
+
+class DartQuotaExceededError(Exception):
+    """DART API 키가 일한도(020)를 소진했다.
+
+    호출부(예: 여러 키를 순환하는 상위 오케스트레이터)가 "그 날짜 범위에
+    공시가 없었다"(status=013, 조용히 빈 리스트 반환)와 "한도 초과로 못
+    가져왔다"를 구분할 수 있도록 별도 예외로 알린다 — 둘 다 빈 리스트로
+    뭉개면 백테스팅용 히스토리에 조용한 결측이 생긴다.
+    """
+
 
 class DartScraper(BaseScraper):
     source = NewsSource.DART
@@ -55,6 +68,10 @@ class DartScraper(BaseScraper):
             if status == "013":
                 logger.debug("DART: no disclosures found for %s ~ %s", bgn_de, end_de)
                 break
+            if status == QUOTA_EXHAUSTED_STATUS:
+                raise DartQuotaExceededError(
+                    f"DART API key exhausted daily quota (status=020, {bgn_de}~{end_de})"
+                )
             if status != "000":
                 logger.error("DART API error: status=%s, message=%s", status, data.get("message"))
                 break

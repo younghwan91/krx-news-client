@@ -29,7 +29,7 @@ class TestNewsArticle:
     def test_article_defaults(self):
         article = NewsArticle(
             id="test:1",
-            source=NewsSource.HANKYUNG,
+            source=NewsSource.DART,
             category=NewsCategory.DISCLOSURE,
             title="Test",
             url="https://example.com",

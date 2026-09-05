@@ -8,8 +8,6 @@ from pydantic import BaseModel, Field
 
 class NewsSource(StrEnum):
     DART = "dart"
-    HANKYUNG = "hankyung"
-    THEBELL = "thebell"
     TOSS = "toss"
 
 

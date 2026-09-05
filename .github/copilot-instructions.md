@@ -26,5 +26,5 @@ ruff format src/
 ### Key layers
 
 - `scrapers/base.py` — `BaseScraper`: shared httpx client, retry/backoff, throttling, user-agent rotation
-- `scrapers/{toss,hankyung,thebell,dart}.py` — one scraper per source
+- `scrapers/{toss,dart}.py` — one scraper per source
 - `models/schemas.py` — `NewsArticle`, `Disclosure`, `NewsCategory`, `NewsSource`

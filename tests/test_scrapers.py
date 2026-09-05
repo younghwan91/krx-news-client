@@ -4,11 +4,12 @@ import pytest
 
 from krx_news_client.models.schemas import NewsArticle, NewsCategory, NewsSource
 from krx_news_client.scrapers.base import BaseScraper, make_article_id
+from krx_news_client.scrapers.dart import DartQuotaExceededError, DartScraper
 from krx_news_client.scrapers.toss import TossScraper, build_article_url
 
 
 class ConcreteScraper(BaseScraper):
-    source = NewsSource.HANKYUNG
+    source = NewsSource.DART
     base_url = "https://example.com"
 
     async def scrape_news(self) -> list[NewsArticle]:
@@ -43,7 +44,7 @@ class TestBaseScraper:
             tickers=["005930"],
         )
         assert isinstance(article, NewsArticle)
-        assert article.source == NewsSource.HANKYUNG
+        assert article.source == NewsSource.DART
         assert article.title == "Test Article"
         assert article.tickers == ["005930"]
 
@@ -56,7 +57,7 @@ class TestBaseScraper:
             ticker="005930",
             disclosure_type="주요사항보고서",
         )
-        assert disc.source == NewsSource.HANKYUNG
+        assert disc.source == NewsSource.DART
         assert disc.company == "삼성전자"
 
     @pytest.mark.asyncio
@@ -130,3 +131,51 @@ class TestTossScraper:
     def test_parse_date_invalid(self):
         assert TossScraper._parse_date("not-a-date") is None
         assert TossScraper._parse_date(None) is None
+
+
+class TestDartScraper:
+    @pytest.mark.asyncio
+    async def test_scrape_disclosures_quota_exceeded(self, httpx_mock):
+        httpx_mock.add_response(json={"status": "020", "message": "사용한도 초과"})
+        scraper = DartScraper(api_key="dummy")
+        try:
+            with pytest.raises(DartQuotaExceededError):
+                await scraper.scrape_disclosures()
+        finally:
+            await scraper.close()
+
+    @pytest.mark.asyncio
+    async def test_scrape_disclosures_no_data(self, httpx_mock):
+        httpx_mock.add_response(json={"status": "013", "message": "조회된 데이터가 없습니다"})
+        scraper = DartScraper(api_key="dummy")
+        try:
+            result = await scraper.scrape_disclosures()
+        finally:
+            await scraper.close()
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_scrape_disclosures_parses_list(self, httpx_mock):
+        httpx_mock.add_response(json={
+            "status": "000",
+            "message": "정상",
+            "page_no": 1,
+            "total_page": 1,
+            "list": [
+                {
+                    "rcept_no": "20260905000123",
+                    "corp_name": "삼성전자",
+                    "stock_code": "005930",
+                    "report_nm": "주요사항보고서",
+                    "rcept_dt": "20260905",
+                },
+            ],
+        })
+        scraper = DartScraper(api_key="dummy")
+        try:
+            result = await scraper.scrape_disclosures()
+        finally:
+            await scraper.close()
+        assert len(result) == 1
+        assert result[0].ticker == "005930"
+        assert result[0].company == "삼성전자"
