@@ -10,7 +10,7 @@
 
 매체마다 HTML 구조도 갱신 주기도 제각각이라, 뉴스를 쓰려는 쪽이 매번 크롤러를 다시 짜게 된다. 그 일을 한 번만 하려고 만들었다.
 
-![Swagger UI](docs/images/swagger-ui.png)
+[![Swagger UI](docs/images/swagger-ui.png)](docs/images/swagger-ui.png)
 
 ## 빠른 시작
 
@@ -29,6 +29,32 @@ curl "http://localhost:8000/api/v1/news?page_size=5"
 curl "http://localhost:8000/api/v1/news/search?q=삼성전자"
 curl "http://localhost:8000/api/v1/disclosure/005930"
 curl "http://localhost:8000/api/v1/news/toss?page_size=5"   # 토스증권 소스만
+```
+
+`/api/v1/news?page_size=5` 응답 예시:
+
+```json
+{
+  "items": [
+    {
+      "id": "toss:a1b2c3d4e5f6",
+      "source": "toss",
+      "category": "market",
+      "title": "코스피, 외국인 매수세에 2,650선 돌파",
+      "url": "https://tossinvest.com/news?...",
+      "content": "...",
+      "summary": "",
+      "tickers": [],
+      "author": "",
+      "published_at": "2026-03-31T09:30:00",
+      "collected_at": "2026-03-31T09:35:12"
+    }
+  ],
+  "total": 142,
+  "page": 1,
+  "page_size": 5,
+  "has_next": true
+}
 ```
 
 전체 엔드포인트·응답 형태는 [docs/API.md](docs/API.md), 로컬 개발·환경변수·배포는 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
@@ -54,6 +80,16 @@ API 핸들러는 Redis 만 읽는다. 크롤링은 백그라운드 스케줄러�
 | 한국경제 (hankyung.com) | 뉴스 | HTML 크롤링 | 300초 |
 | 더벨 (thebell.co.kr) | 뉴스 | HTML 크롤링 | 300초 |
 | 토스증권 (tossinvest.com) | 뉴스 | 비공식 내부 API | 300초 |
+
+위 주기는 기본값이고, `.env`로 바꿔서 쓸 수 있다.
+
+```bash
+# .env
+CRAWL_INTERVAL_DISCLOSURE=30   # 공시를 더 자주 확인하고 싶다면
+CRAWL_INTERVAL_NEWS=600        # 크롤링 대상 서버 부담을 줄이고 싶다면
+```
+
+한경·더벨·토스는 하나의 스케줄러 잡을 공유하므로 `CRAWL_INTERVAL_NEWS` 값이 세 소스에 동일하게 적용된다. 소스별로 따로 주기를 두려면 `scheduler.py`를 고쳐야 한다.
 
 ## 응답 필드
 
