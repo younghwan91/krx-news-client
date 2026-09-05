@@ -1,8 +1,8 @@
 # krx-news-client
 
-[![CI](https://github.com/younghwan91/krx-news-rest-api/actions/workflows/ci.yml/badge.svg)](https://github.com/younghwan91/krx-news-rest-api/actions/workflows/ci.yml)
+[![CI](https://github.com/younghwan91/krx-news-client/actions/workflows/ci.yml/badge.svg)](https://github.com/younghwan91/krx-news-client/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/github/license/younghwan91/krx-news-rest-api)](https://github.com/younghwan91/krx-news-rest-api/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/younghwan91/krx-news-client)](https://github.com/younghwan91/krx-news-client/blob/main/LICENSE)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-younghwan--chae-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/younghwan-chae/)
 
 **한국 주식시장의 뉴스·공시를 4개 매체에서 모아 하나의 스키마로 내주는 Python 클라이언트 라이브러리** — DART, 한국경제, 더벨, 토스증권.
@@ -104,9 +104,9 @@ Apache License 2.0 — 전문은 [LICENSE](LICENSE) 참조.
 
 ## ⭐ 도움이 되셨다면
 
-이 프로젝트가 유용했다면 우측 상단 **[⭐ Star](https://github.com/younghwan91/krx-news-rest-api)** 를 눌러주세요. 검색·추천 노출이 올라가 더 많은 분들이 찾을 수 있습니다.
+이 프로젝트가 유용했다면 우측 상단 **[⭐ Star](https://github.com/younghwan91/krx-news-client)** 를 눌러주세요. 검색·추천 노출이 올라가 더 많은 분들이 찾을 수 있습니다.
 
-- 🐛 버그·질문 → [Issues](https://github.com/younghwan91/krx-news-rest-api/issues)
+- 🐛 버그·질문 → [Issues](https://github.com/younghwan91/krx-news-client/issues)
 - 📈 업데이트 소식 → [팔로우 @younghwan91](https://github.com/younghwan91)
 
 ## 관련 프로젝트 — 오픈소스 퀀트 스택
