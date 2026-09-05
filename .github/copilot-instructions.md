@@ -40,7 +40,7 @@ APScheduler ─→ Scrapers ─→ Cache Service ─→ Redis (write)
 
 - **`scrapers/`** — One module per news source, all extend `BaseScraper`. Each implements `scrape_news()` and/or `scrape_disclosures()`. The base class handles HTTP retries, rate limiting, and User-Agent rotation.
 - **`services/cache.py`** — Redis read/write layer. All data flows through here. Uses sorted sets (by publish time) for the combined feed, lists for per-source feeds.
-- **`services/scheduler.py`** — APScheduler runs crawl jobs at configured intervals. Disclosures (KIND/DART) every 60s, news every 300s.
+- **`services/scheduler.py`** — APScheduler runs crawl jobs at configured intervals. Disclosures (DART) every 60s, news every 300s.
 - **`routes/news.py`** — FastAPI router. All endpoints read from Redis cache only.
 - **`models/schemas.py`** — Pydantic models. `NewsArticle` and `Disclosure` are the two core data types. All sources normalize into these.
 
@@ -48,11 +48,10 @@ APScheduler ─→ Scrapers ─→ Cache Service ─→ Redis (write)
 
 | Source | Type | Module | Interval |
 |--------|------|--------|----------|
-| KIND (kind.krx.co.kr) | 공시 (disclosures) | `scrapers/kind.py` | 60s |
 | DART (dart.fss.or.kr) | 공시 (disclosures) | `scrapers/dart.py` | 60s |
-| Naver Finance | 뉴스 | `scrapers/naver.py` | 300s |
 | 한국경제 (Hankyung) | 뉴스 | `scrapers/hankyung.py` | 300s |
 | 더벨 (TheBell) | 뉴스 | `scrapers/thebell.py` | 300s |
+| 토스증권 (Toss) | 뉴스 | `scrapers/toss.py` | 300s |
 
 ## Conventions
 
@@ -60,7 +59,6 @@ APScheduler ─→ Scrapers ─→ Cache Service ─→ Redis (write)
 - **async everywhere** — All scrapers, cache operations, and routes are async. Use `httpx.AsyncClient` (not `requests`).
 - **Adding a new scraper**: Create `scrapers/new_source.py` extending `BaseScraper`, add the source to `NewsSource` enum, register in `scheduler.py`'s `get_scrapers()`.
 - **Article IDs** — `{source}:{md5(url)[:12]}` format via `make_article_id()`. Deterministic dedup by URL.
-- **Rate limiting** — Each scraper sets `min_delay`/`max_delay` between requests. Naver is 1-3s, others 0.5-2s.
+- **Rate limiting** — Each scraper sets `min_delay`/`max_delay` between requests, typically 0.5-2s.
 - **Config** — `pydantic-settings` loads from `.env` file. See `.env.example` for all variables.
-- **Encoding** — Naver Finance uses `euc-kr`. KRX data may use `cp949`. Always handle explicitly.
 - **Ruff** — Line length 100, target Python 3.11. Run `ruff check` before committing.

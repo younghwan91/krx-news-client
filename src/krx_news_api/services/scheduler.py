@@ -9,9 +9,8 @@ from krx_news_api.models.schemas import NewsSource
 from krx_news_api.scrapers.base import BaseScraper
 from krx_news_api.scrapers.dart import DartScraper
 from krx_news_api.scrapers.hankyung import HankyungScraper
-from krx_news_api.scrapers.kind import KindScraper
-from krx_news_api.scrapers.naver import NaverScraper
 from krx_news_api.scrapers.thebell import TheBellScraper
+from krx_news_api.scrapers.toss import TossScraper
 from krx_news_api.services.cache import (
     cache_articles,
     cache_disclosures,
@@ -28,11 +27,10 @@ def get_scrapers() -> dict[NewsSource, BaseScraper]:
     global _scrapers
     if not _scrapers:
         _scrapers = {
-            NewsSource.KIND: KindScraper(),
             NewsSource.DART: DartScraper(),
-            NewsSource.NAVER: NaverScraper(),
             NewsSource.HANKYUNG: HankyungScraper(),
             NewsSource.THEBELL: TheBellScraper(),
+            NewsSource.TOSS: TossScraper(),
         }
     return _scrapers
 
@@ -63,12 +61,16 @@ async def crawl_source(source: NewsSource) -> None:
 
 
 async def crawl_all_news() -> None:
-    for source in [NewsSource.NAVER, NewsSource.HANKYUNG, NewsSource.THEBELL]:
+    for source in [
+        NewsSource.HANKYUNG,
+        NewsSource.THEBELL,
+        NewsSource.TOSS,
+    ]:
         await crawl_source(source)
 
 
 async def crawl_all_disclosures() -> None:
-    for source in [NewsSource.KIND, NewsSource.DART]:
+    for source in [NewsSource.DART]:
         await crawl_source(source)
 
 
@@ -81,7 +83,7 @@ def start_scheduler() -> AsyncIOScheduler:
         "interval",
         seconds=settings.crawl_interval_disclosure,
         id="crawl_disclosures",
-        name="Crawl disclosures (KIND + DART)",
+        name="Crawl disclosures (DART)",
         misfire_grace_time=30,
     )
 
@@ -90,7 +92,7 @@ def start_scheduler() -> AsyncIOScheduler:
         "interval",
         seconds=settings.crawl_interval_news,
         id="crawl_news",
-        name="Crawl news (Naver + Hankyung + TheBell)",
+        name="Crawl news (Hankyung + TheBell + Toss)",
         misfire_grace_time=60,
     )
 

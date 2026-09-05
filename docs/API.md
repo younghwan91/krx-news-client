@@ -18,7 +18,7 @@
 
 - `page` — 페이지 번호 (기본 1, 최소 1)
 - `page_size` — 페이지 크기 (기본 20, 최소 1, 최대 100)
-- `source` — `kind`, `dart`, `naver`, `hankyung`, `thebell`
+- `source` — `dart`, `hankyung`, `thebell`, `toss`
 
 ## 요청/응답 예시
 
@@ -32,11 +32,11 @@ curl "http://localhost:8000/api/v1/news?page=1&page_size=5"
 {
   "items": [
     {
-      "id": "naver:a1b2c3d4e5f6",
-      "source": "naver",
+      "id": "toss:a1b2c3d4e5f6",
+      "source": "toss",
       "category": "market",
       "title": "코스피, 외국인 매수세에 2,650선 돌파",
-      "url": "https://finance.naver.com/news/...",
+      "url": "https://tossinvest.com/news?...",
       "content": "...",
       "summary": "",
       "tickers": [],
@@ -56,8 +56,8 @@ curl "http://localhost:8000/api/v1/news?page=1&page_size=5"
 
 ```bash
 curl "http://localhost:8000/api/v1/news/search?q=삼성전자"
-curl "http://localhost:8000/api/v1/news/naver"
 curl "http://localhost:8000/api/v1/news/hankyung"
+curl "http://localhost:8000/api/v1/news/toss"
 ```
 
 검색은 캐시된 기사의 **제목·본문**에 질의어가 들어 있는지 보는 부분 문자열 매칭이다. 형태소 분석이나 랭킹은 없다.
@@ -67,17 +67,17 @@ curl "http://localhost:8000/api/v1/news/hankyung"
 ```bash
 curl "http://localhost:8000/api/v1/disclosure"              # 전체
 curl "http://localhost:8000/api/v1/disclosure/005930"       # 삼성전자
-curl "http://localhost:8000/api/v1/disclosure?source=kind"  # KIND 만
+curl "http://localhost:8000/api/v1/disclosure?source=dart"  # DART 만
 ```
 
 ```json
 {
   "items": [
     {
-      "id": "kind:x9y8z7w6v5u4",
-      "source": "kind",
+      "id": "dart:x9y8z7w6v5u4",
+      "source": "dart",
       "title": "주요사항보고서(자기주식취득결정)",
-      "url": "https://kind.krx.co.kr/disclosure/...",
+      "url": "https://dart.fss.or.kr/dsaf001/main.do?rcept_no=...",
       "company": "삼성전자",
       "ticker": "005930",
       "disclosure_type": "주요사항보고서",
@@ -101,7 +101,7 @@ curl "http://localhost:8000/api/v1/status"
 ```json
 [
   {
-    "source": "kind",
+    "source": "dart",
     "last_crawled_at": "2026-03-31T09:30:12",
     "articles_count": 45,
     "is_healthy": true,

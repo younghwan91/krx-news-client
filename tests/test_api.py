@@ -22,7 +22,7 @@ async def test_list_news(client):
 
 @pytest.mark.asyncio
 async def test_list_news_with_source(client):
-    resp = await client.get("/api/v1/news?source=naver")
+    resp = await client.get("/api/v1/news?source=toss")
     assert resp.status_code == 200
 
 

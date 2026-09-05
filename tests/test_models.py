@@ -15,8 +15,8 @@ from krx_news_api.models.schemas import (
 class TestNewsArticle:
     def test_create_article(self):
         article = NewsArticle(
-            id="naver:abc123",
-            source=NewsSource.NAVER,
+            id="toss:abc123",
+            source=NewsSource.TOSS,
             category=NewsCategory.MARKET,
             title="삼성전자 실적 발표",
             url="https://example.com/article/1",
@@ -24,14 +24,14 @@ class TestNewsArticle:
             tickers=["005930"],
             published_at=datetime(2024, 1, 15, 9, 0),
         )
-        assert article.source == NewsSource.NAVER
+        assert article.source == NewsSource.TOSS
         assert article.tickers == ["005930"]
         assert "삼성전자" in article.title
 
     def test_article_defaults(self):
         article = NewsArticle(
             id="test:1",
-            source=NewsSource.KIND,
+            source=NewsSource.HANKYUNG,
             category=NewsCategory.DISCLOSURE,
             title="Test",
             url="https://example.com",
@@ -44,7 +44,7 @@ class TestNewsArticle:
     def test_article_serialization(self):
         article = NewsArticle(
             id="test:1",
-            source=NewsSource.NAVER,
+            source=NewsSource.TOSS,
             category=NewsCategory.STOCK,
             title="테스트 기사",
             url="https://example.com",
@@ -59,10 +59,10 @@ class TestNewsArticle:
 class TestDisclosure:
     def test_create_disclosure(self):
         disc = Disclosure(
-            id="kind:xyz789",
-            source=NewsSource.KIND,
+            id="dart:xyz789",
+            source=NewsSource.DART,
             title="주요사항보고서",
-            url="https://kind.krx.co.kr/disclosure/1",
+            url="https://dart.fss.or.kr/disclosure/1",
             company="삼성전자",
             ticker="005930",
             disclosure_type="주요사항보고서",
@@ -77,7 +77,7 @@ class TestPaginatedResponse:
         articles = [
             NewsArticle(
                 id=f"test:{i}",
-                source=NewsSource.NAVER,
+                source=NewsSource.TOSS,
                 category=NewsCategory.MARKET,
                 title=f"Article {i}",
                 url=f"https://example.com/{i}",
@@ -95,7 +95,7 @@ class TestPaginatedResponse:
 class TestCrawlerStatus:
     def test_healthy(self):
         status = CrawlerStatus(
-            source=NewsSource.KIND,
+            source=NewsSource.HANKYUNG,
             last_crawled_at=datetime.now(),
             articles_count=10,
             is_healthy=True,

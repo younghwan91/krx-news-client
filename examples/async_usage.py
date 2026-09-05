@@ -12,7 +12,7 @@ import asyncio
 import httpx
 
 BASE_URL = "http://localhost:8000/api/v1"
-SOURCES = ["kind", "dart", "naver", "hankyung", "thebell"]
+SOURCES = ["dart", "hankyung", "thebell", "toss"]
 
 
 async def fetch_all_sources() -> dict[str, dict]:
