@@ -9,7 +9,7 @@ from datetime import datetime
 
 import httpx
 
-from krx_news_api.models.schemas import Disclosure, NewsArticle, NewsCategory, NewsSource
+from krx_news_client.models.schemas import Disclosure, NewsArticle, NewsCategory, NewsSource
 
 logger = logging.getLogger(__name__)
 

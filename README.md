@@ -1,59 +1,59 @@
-# KRX News REST API
+# krx-news-client
 
 [![CI](https://github.com/younghwan91/krx-news-rest-api/actions/workflows/ci.yml/badge.svg)](https://github.com/younghwan91/krx-news-rest-api/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/github/license/younghwan91/krx-news-rest-api)](https://github.com/younghwan91/krx-news-rest-api/blob/main/LICENSE)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-younghwan--chae-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/younghwan-chae/)
 
-**한국 주식시장의 뉴스·공시를 4개 매체에서 모아 하나의 스키마로 내주는 REST API** — DART, 한국경제, 더벨, 토스증권.
+**한국 주식시장의 뉴스·공시를 4개 매체에서 모아 하나의 스키마로 내주는 Python 클라이언트 라이브러리** — DART, 한국경제, 더벨, 토스증권.
 
-매체마다 HTML 구조도 갱신 주기도 제각각이라, 뉴스를 쓰려는 쪽이 매번 크롤러를 다시 짜게 된다. 그 일을 한 번만 하려고 만들었다.
+매체마다 HTML 구조도 갱신 주기도 제각각이라, 뉴스를 쓰려는 쪽이 매번 크롤러를 다시 짜게 된다. 그 일을 한 번만 하려고 만들었다. [kiwoom-client](https://github.com/younghwan91/kiwoom-client)와 같은 성격의 라이브러리다 — 서버를 띄우지 않고, 호출한 프로세스 안에서 그때그때 매체에 직접 요청해 정규화된 결과를 돌려준다.
 
-![Swagger UI](docs/images/swagger-ui.png)
+## 설치
+
+```bash
+pip install krx-news-client
+```
 
 ## 빠른 시작
 
-```bash
-git clone https://github.com/younghwan91/krx-news-rest-api.git
-cd krx-news-rest-api
-cp .env.example .env          # DART_API_KEY 는 선택 (없으면 나머지 3개 소스만 돈다)
+```python
+import asyncio
+from krx_news_client import TossScraper
 
-docker compose up -d          # API + Redis
-curl http://localhost:8000/health          # {"status":"ok"}
-open http://localhost:8000/docs            # Swagger UI
+async def main():
+    scraper = TossScraper()
+    try:
+        articles = await scraper.scrape_news()
+        for article in articles[:5]:
+            print(article.title, article.published_at)
+    finally:
+        await scraper.close()
+
+asyncio.run(main())
 ```
 
-```bash
-curl "http://localhost:8000/api/v1/news?page_size=5"
-curl "http://localhost:8000/api/v1/news/search?q=삼성전자"
-curl "http://localhost:8000/api/v1/disclosure/005930"
-curl "http://localhost:8000/api/v1/news/toss?page_size=5"   # 토스증권 소스만
+DART 공시는 API 키가 필요하다:
+
+```python
+from krx_news_client import DartScraper
+
+scraper = DartScraper(api_key="...")
+disclosures = await scraper.scrape_disclosures()
 ```
 
-전체 엔드포인트·응답 형태는 [docs/API.md](docs/API.md), 로컬 개발·환경변수·배포는 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
-
-## 캐시 우선 구조
-
-요청이 올 때 크롤링하면 응답이 매체 사이트 속도에 묶이고, 트래픽이 몰리면 그대로 상대 서버를 때린다. **읽기 경로와 수집 경로를 갈라놨다.**
-
-```
-[수집] APScheduler -> 4개 스크래퍼 -> 정규화 -> Redis     (공시 60초 / 뉴스 300초)
-[읽기] 클라이언트   -> FastAPI     -> Redis 에서 즉시 응답 (크롤링 대기 없음)
-```
-
-API 핸들러는 Redis 만 읽는다. 크롤링은 백그라운드 스케줄러가 자기 주기로 돌고, 실패해도 캐시에 있던 직전 데이터로 계속 응답한다. 소스별 성공/실패는 `/api/v1/status` 에 그대로 노출된다.
-
-수집한 기사는 매체와 무관하게 `NewsArticle`, 공시는 `Disclosure` 한 벌로 정규화한다. 소스가 늘어도 클라이언트 코드는 그대로다.
+더 많은 예제는 [`examples/`](examples/) 참고.
 
 ## 수집 소스
 
-| 소스 | 데이터 | 수집 방식 | 주기 |
-|---|---|---|---|
-| DART (dart.fss.or.kr) | 공시 | 공식 Open API (키 필요) | 60초 |
-| 한국경제 (hankyung.com) | 뉴스 | HTML 크롤링 | 300초 |
-| 더벨 (thebell.co.kr) | 뉴스 | HTML 크롤링 | 300초 |
-| 토스증권 (tossinvest.com) | 뉴스 | 비공식 내부 API | 300초 |
+| 소스 | 데이터 | 수집 방식 |
+|---|---|---|
+| DART (dart.fss.or.kr) | 공시 | 공식 Open API (키 필요) |
+| 한국경제 (hankyung.com) | 뉴스 | HTML 크롤링 |
+| 더벨 (thebell.co.kr) | 뉴스 | HTML 크롤링 |
+| 토스증권 (tossinvest.com) | 뉴스 | 비공식 내부 API |
+
+수집한 기사는 매체와 무관하게 `NewsArticle`, 공시는 `Disclosure` 한 벌로 정규화한다. 소스가 늘어도 호출 코드는 그대로다.
 
 ## 응답 필드
 
@@ -90,15 +90,12 @@ API 핸들러는 Redis 만 읽는다. 크롤링은 백그라운드 스케줄러�
 ## 구조
 
 ```
-src/krx_news_api/
-├── main.py         # FastAPI 앱 · 미들웨어 · lifespan
-├── routes/news.py  # 엔드포인트 7개
-├── models/         # NewsArticle · Disclosure · CrawlerStatus
-├── scrapers/       # base(재시도·간격·UA 순환) + 소스 4개
-└── services/       # cache(Redis) · scheduler(APScheduler)
+src/krx_news_client/
+├── models/schemas.py   # NewsArticle · Disclosure · NewsCategory · NewsSource
+└── scrapers/           # base(재시도·간격·UA 순환) + 소스 4개
 ```
 
-FastAPI · httpx · BeautifulSoup4 · Redis · APScheduler 로 돌아가고, 테스트는 fakeredis 를 써서 Redis 없이 `pytest` 만으로 통과한다.
+httpx · BeautifulSoup4 · pydantic 만으로 돌아간다 — 상시 구동 서버, DB, 캐시 계층이 없다. 호출한 쪽이 원하는 만큼만 부르고, 저장이 필요하면 호출하는 쪽에서 알아서 한다 (예: [quant-airflow](https://github.com/younghwan91/quant-airflow)가 이 라이브러리로 수집해 TimescaleDB에 적재).
 
 ## 라이선스
 

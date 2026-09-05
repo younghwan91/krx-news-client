@@ -3,9 +3,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from krx_news_api.config import settings
-from krx_news_api.models.schemas import Disclosure, NewsArticle, NewsSource
-from krx_news_api.scrapers.base import BaseScraper
+from krx_news_client.models.schemas import Disclosure, NewsArticle, NewsSource
+from krx_news_client.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
 
@@ -16,12 +15,15 @@ class DartScraper(BaseScraper):
     source = NewsSource.DART
     base_url = "https://opendart.fss.or.kr/api"
 
+    def __init__(self, api_key: str) -> None:
+        super().__init__()
+        self.api_key = api_key
+
     async def scrape_news(self) -> list[NewsArticle]:
         return []
 
     async def scrape_disclosures(self) -> list[Disclosure]:
-        api_key = settings.dart_api_key
-        if not api_key:
+        if not self.api_key:
             logger.warning("DART API key not configured – skipping disclosure scrape")
             return []
 
@@ -35,7 +37,7 @@ class DartScraper(BaseScraper):
 
         while True:
             params = {
-                "crtfc_key": api_key,
+                "crtfc_key": self.api_key,
                 "bgn_de": bgn_de,
                 "end_de": end_de,
                 "page_no": str(page_no),

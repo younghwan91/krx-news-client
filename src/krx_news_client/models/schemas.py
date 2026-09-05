@@ -46,19 +46,3 @@ class Disclosure(BaseModel):
     disclosure_type: str = ""
     published_at: datetime
     collected_at: datetime = Field(default_factory=datetime.now)
-
-
-class PaginatedResponse(BaseModel):
-    items: list[NewsArticle | Disclosure]
-    total: int
-    page: int
-    page_size: int
-    has_next: bool
-
-
-class CrawlerStatus(BaseModel):
-    source: NewsSource
-    last_crawled_at: datetime | None = None
-    articles_count: int = 0
-    is_healthy: bool = True
-    error: str | None = None

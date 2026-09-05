@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from krx_news_api.models.schemas import (
-    CrawlerStatus,
+from krx_news_client.models.schemas import (
     Disclosure,
     NewsArticle,
     NewsCategory,
     NewsSource,
-    PaginatedResponse,
 )
 
 
@@ -70,44 +68,3 @@ class TestDisclosure:
         )
         assert disc.ticker == "005930"
         assert disc.company == "삼성전자"
-
-
-class TestPaginatedResponse:
-    def test_paginated(self):
-        articles = [
-            NewsArticle(
-                id=f"test:{i}",
-                source=NewsSource.TOSS,
-                category=NewsCategory.MARKET,
-                title=f"Article {i}",
-                url=f"https://example.com/{i}",
-                published_at=datetime.now(),
-            )
-            for i in range(3)
-        ]
-        resp = PaginatedResponse(
-            items=articles, total=50, page=1, page_size=20, has_next=True
-        )
-        assert len(resp.items) == 3
-        assert resp.has_next is True
-
-
-class TestCrawlerStatus:
-    def test_healthy(self):
-        status = CrawlerStatus(
-            source=NewsSource.HANKYUNG,
-            last_crawled_at=datetime.now(),
-            articles_count=10,
-            is_healthy=True,
-        )
-        assert status.is_healthy
-        assert status.error is None
-
-    def test_unhealthy(self):
-        status = CrawlerStatus(
-            source=NewsSource.DART,
-            is_healthy=False,
-            error="Connection timeout",
-        )
-        assert not status.is_healthy
-        assert "timeout" in status.error.lower()

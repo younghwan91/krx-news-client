@@ -13,8 +13,8 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
-from krx_news_api.models.schemas import NewsArticle, NewsCategory, NewsSource
-from krx_news_api.scrapers.base import BaseScraper
+from krx_news_client.models.schemas import NewsArticle, NewsCategory, NewsSource
+from krx_news_client.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
 

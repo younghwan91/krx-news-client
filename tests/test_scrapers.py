@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from krx_news_api.models.schemas import NewsArticle, NewsCategory, NewsSource
-from krx_news_api.scrapers.base import BaseScraper, make_article_id
-from krx_news_api.scrapers.toss import TossScraper, build_article_url
+from krx_news_client.models.schemas import NewsArticle, NewsCategory, NewsSource
+from krx_news_client.scrapers.base import BaseScraper, make_article_id
+from krx_news_client.scrapers.toss import TossScraper, build_article_url
 
 
 class ConcreteScraper(BaseScraper):
