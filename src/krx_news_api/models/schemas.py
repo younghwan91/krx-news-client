@@ -7,9 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class NewsSource(StrEnum):
-    KIND = "kind"
     DART = "dart"
-    NAVER = "naver"
     HANKYUNG = "hankyung"
     THEBELL = "thebell"
     TOSS = "toss"

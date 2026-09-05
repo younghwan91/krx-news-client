@@ -8,7 +8,7 @@ from krx_news_api.scrapers.toss import TossScraper, build_article_url
 
 
 class ConcreteScraper(BaseScraper):
-    source = NewsSource.NAVER
+    source = NewsSource.HANKYUNG
     base_url = "https://example.com"
 
     async def scrape_news(self) -> list[NewsArticle]:
@@ -43,7 +43,7 @@ class TestBaseScraper:
             tickers=["005930"],
         )
         assert isinstance(article, NewsArticle)
-        assert article.source == NewsSource.NAVER
+        assert article.source == NewsSource.HANKYUNG
         assert article.title == "Test Article"
         assert article.tickers == ["005930"]
 
@@ -56,7 +56,7 @@ class TestBaseScraper:
             ticker="005930",
             disclosure_type="주요사항보고서",
         )
-        assert disc.source == NewsSource.NAVER
+        assert disc.source == NewsSource.HANKYUNG
         assert disc.company == "삼성전자"
 
     @pytest.mark.asyncio

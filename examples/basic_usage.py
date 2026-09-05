@@ -19,7 +19,7 @@ def get_latest_news(page: int = 1, page_size: int = 5) -> dict:
 
 
 def get_news_by_source(source: str, page_size: int = 5) -> dict:
-    """소스별 뉴스 조회. source: kind, dart, naver, hankyung, thebell"""
+    """소스별 뉴스 조회. source: dart, hankyung, thebell, toss"""
     resp = httpx.get(f"{BASE_URL}/news/{source}", params={"page_size": page_size})
     resp.raise_for_status()
     return resp.json()
@@ -56,8 +56,8 @@ if __name__ == "__main__":
         print(f"  [{item['source']}] {item['title']}")
     print(f"  총 {data['total']}건\n")
 
-    print("=== 네이버 금융 뉴스 ===")
-    data = get_news_by_source("naver")
+    print("=== 토스증권 뉴스 ===")
+    data = get_news_by_source("toss")
     for item in data["items"]:
         print(f"  {item['title']}")
     print()
