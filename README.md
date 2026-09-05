@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/github/license/younghwan91/krx-news-rest-api)](https://github.com/younghwan91/krx-news-rest-api/blob/main/LICENSE)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-younghwan--chae-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/younghwan-chae/)
 
-**한국 주식시장의 뉴스·공시를 5개 매체에서 모아 하나의 스키마로 내주는 REST API** — KIND, DART, 네이버 금융, 한국경제, 더벨.
+**한국 주식시장의 뉴스·공시를 6개 매체에서 모아 하나의 스키마로 내주는 REST API** — KIND, DART, 네이버 금융, 한국경제, 더벨, 토스증권.
 
 매체마다 HTML 구조도 갱신 주기도 제각각이라, 뉴스를 쓰려는 쪽이 매번 크롤러를 다시 짜게 된다. 그 일을 한 번만 하려고 만들었다.
 
@@ -17,7 +17,7 @@
 ```bash
 git clone https://github.com/younghwan91/krx-news-rest-api.git
 cd krx-news-rest-api
-cp .env.example .env          # DART_API_KEY 는 선택 (없으면 나머지 4개 소스만 돈다)
+cp .env.example .env          # DART_API_KEY 는 선택 (없으면 나머지 5개 소스만 돈다)
 
 docker compose up -d          # API + Redis
 curl http://localhost:8000/health          # {"status":"ok"}
@@ -28,6 +28,7 @@ open http://localhost:8000/docs            # Swagger UI
 curl "http://localhost:8000/api/v1/news?page_size=5"
 curl "http://localhost:8000/api/v1/news/search?q=삼성전자"
 curl "http://localhost:8000/api/v1/disclosure/005930"
+curl "http://localhost:8000/api/v1/news/toss?page_size=5"   # 토스증권 소스만
 ```
 
 전체 엔드포인트·응답 형태는 [docs/API.md](docs/API.md), 로컬 개발·환경변수·배포는 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
@@ -37,7 +38,7 @@ curl "http://localhost:8000/api/v1/disclosure/005930"
 요청이 올 때 크롤링하면 응답이 매체 사이트 속도에 묶이고, 트래픽이 몰리면 그대로 상대 서버를 때린다. **읽기 경로와 수집 경로를 갈라놨다.**
 
 ```
-[수집] APScheduler -> 5개 스크래퍼 -> 정규화 -> Redis     (공시 60초 / 뉴스 300초)
+[수집] APScheduler -> 6개 스크래퍼 -> 정규화 -> Redis     (공시 60초 / 뉴스 300초)
 [읽기] 클라이언트   -> FastAPI     -> Redis 에서 즉시 응답 (크롤링 대기 없음)
 ```
 
@@ -52,7 +53,7 @@ src/krx_news_api/
 ├── main.py         # FastAPI 앱 · 미들웨어 · lifespan
 ├── routes/news.py  # 엔드포인트 7개
 ├── models/         # NewsArticle · Disclosure · CrawlerStatus
-├── scrapers/       # base(재시도·간격·UA 순환) + 소스 5개
+├── scrapers/       # base(재시도·간격·UA 순환) + 소스 6개
 └── services/       # cache(Redis) · scheduler(APScheduler)
 ```
 

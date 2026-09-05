@@ -12,6 +12,7 @@ class NewsSource(StrEnum):
     NAVER = "naver"
     HANKYUNG = "hankyung"
     THEBELL = "thebell"
+    TOSS = "toss"
 
 
 class NewsCategory(StrEnum):

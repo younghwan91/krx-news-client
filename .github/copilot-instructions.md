@@ -53,6 +53,7 @@ APScheduler ─→ Scrapers ─→ Cache Service ─→ Redis (write)
 | Naver Finance | 뉴스 | `scrapers/naver.py` | 300s |
 | 한국경제 (Hankyung) | 뉴스 | `scrapers/hankyung.py` | 300s |
 | 더벨 (TheBell) | 뉴스 | `scrapers/thebell.py` | 300s |
+| 토스증권 (Toss) | 뉴스 | `scrapers/toss.py` | 300s |
 
 ## Conventions
 

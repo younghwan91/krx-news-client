@@ -12,6 +12,7 @@ from krx_news_api.scrapers.hankyung import HankyungScraper
 from krx_news_api.scrapers.kind import KindScraper
 from krx_news_api.scrapers.naver import NaverScraper
 from krx_news_api.scrapers.thebell import TheBellScraper
+from krx_news_api.scrapers.toss import TossScraper
 from krx_news_api.services.cache import (
     cache_articles,
     cache_disclosures,
@@ -33,6 +34,7 @@ def get_scrapers() -> dict[NewsSource, BaseScraper]:
             NewsSource.NAVER: NaverScraper(),
             NewsSource.HANKYUNG: HankyungScraper(),
             NewsSource.THEBELL: TheBellScraper(),
+            NewsSource.TOSS: TossScraper(),
         }
     return _scrapers
 
@@ -63,7 +65,12 @@ async def crawl_source(source: NewsSource) -> None:
 
 
 async def crawl_all_news() -> None:
-    for source in [NewsSource.NAVER, NewsSource.HANKYUNG, NewsSource.THEBELL]:
+    for source in [
+        NewsSource.NAVER,
+        NewsSource.HANKYUNG,
+        NewsSource.THEBELL,
+        NewsSource.TOSS,
+    ]:
         await crawl_source(source)
 
 
@@ -90,7 +97,7 @@ def start_scheduler() -> AsyncIOScheduler:
         "interval",
         seconds=settings.crawl_interval_news,
         id="crawl_news",
-        name="Crawl news (Naver + Hankyung + TheBell)",
+        name="Crawl news (Naver + Hankyung + TheBell + Toss)",
         misfire_grace_time=60,
     )
 

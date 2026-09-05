@@ -18,7 +18,7 @@
 
 - `page` — 페이지 번호 (기본 1, 최소 1)
 - `page_size` — 페이지 크기 (기본 20, 최소 1, 최대 100)
-- `source` — `kind`, `dart`, `naver`, `hankyung`, `thebell`
+- `source` — `kind`, `dart`, `naver`, `hankyung`, `thebell`, `toss`
 
 ## 요청/응답 예시
 
@@ -58,6 +58,7 @@ curl "http://localhost:8000/api/v1/news?page=1&page_size=5"
 curl "http://localhost:8000/api/v1/news/search?q=삼성전자"
 curl "http://localhost:8000/api/v1/news/naver"
 curl "http://localhost:8000/api/v1/news/hankyung"
+curl "http://localhost:8000/api/v1/news/toss"
 ```
 
 검색은 캐시된 기사의 **제목·본문**에 질의어가 들어 있는지 보는 부분 문자열 매칭이다. 형태소 분석이나 랭킹은 없다.
