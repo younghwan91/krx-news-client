@@ -11,6 +11,8 @@
 
 ## 설치
 
+Python 3.11 이상.
+
 ```bash
 pip install krx-news-client
 ```
@@ -31,6 +33,14 @@ async def main():
         await scraper.close()
 
 asyncio.run(main())
+```
+
+실행하면 이런 식으로 출력된다:
+
+```
+코스피, 외국인 순매수에 2%대 상승 마감 2025-06-10 15:30:00+09:00
+삼성전자, 3분기 실적 시장 예상 상회 2025-06-10 14:05:00+09:00
+...
 ```
 
 DART 공시는 API 키가 필요하다:
@@ -115,9 +125,8 @@ flowchart LR
 
 - `BaseScraper`가 httpx 클라이언트 수명 관리, 요청 간 랜덤 지연, HTTP 오류·429 재시도를 공통으로 처리하고, `TossScraper`/`DartScraper`는 각 매체의 응답을 파싱해 정규화된 스키마로 변환하는 역할만 맡는다.
 - DART는 일한도(status=020) 소진 시 `DartQuotaExceededError`를 던져, 호출부가 "그 기간에 공시가 없음"과 "한도 초과로 못 가져옴"을 구분할 수 있게 한다.
-- 서버·DB·캐시 계층 없이 호출한 프로세스 안에서 그때그때 요청 → 정규화 → 반환만 한다.
 
-httpx · BeautifulSoup4 · pydantic 만으로 돌아간다 — 상시 구동 서버, DB, 캐시 계층이 없다. 호출한 쪽이 원하는 만큼만 부르고, 저장이 필요하면 호출하는 쪽에서 알아서 한다 (예: [quant-airflow](https://github.com/younghwan91/quant-airflow)가 이 라이브러리로 수집해 TimescaleDB에 적재).
+httpx · BeautifulSoup4 · pydantic 만으로 돌아간다. 저장이 필요하면 호출하는 쪽에서 알아서 한다 (예: [quant-airflow](https://github.com/younghwan91/quant-airflow)가 이 라이브러리로 수집해 TimescaleDB에 적재).
 
 ## 라이선스
 
