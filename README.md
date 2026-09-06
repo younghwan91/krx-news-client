@@ -87,11 +87,35 @@ disclosures = await scraper.scrape_disclosures()
 
 ## 구조
 
+```mermaid
+flowchart LR
+    Caller["호출 프로세스\n(예: quant-airflow)"]
+
+    subgraph Client["krx-news-client"]
+        direction TB
+        Toss["TossScraper\n.scrape_news()"]
+        Dart["DartScraper\n.scrape_disclosures()"]
+        Base["BaseScraper\nUA 순환 · 간격 조절(throttle)\n재시도 · 429 백오프"]
+        Schema["schemas.py\nNewsArticle · Disclosure"]
+
+        Toss --> Base
+        Dart --> Base
+        Toss -->|_make_article| Schema
+        Dart -->|_make_disclosure| Schema
+    end
+
+    TossAPI[("토스증권\nwts-info-api\n(비공식 내부 API)")]
+    DartAPI[("DART\nopendart.fss.or.kr\n(공식 Open API)")]
+
+    Caller -->|await scraper.scrape_news()\n / scrape_disclosures()| Client
+    Base -->|POST 대시보드 피드| TossAPI
+    Base -->|GET list.json| DartAPI
+    Client -->|list[NewsArticle]\n / list[Disclosure]| Caller
 ```
-src/krx_news_client/
-├── models/schemas.py   # NewsArticle · Disclosure · NewsCategory · NewsSource
-└── scrapers/           # base(재시도·간격·UA 순환) + 소스 4개
-```
+
+- `BaseScraper`가 httpx 클라이언트 수명 관리, 요청 간 랜덤 지연, HTTP 오류·429 재시도를 공통으로 처리하고, `TossScraper`/`DartScraper`는 각 매체의 응답을 파싱해 정규화된 스키마로 변환하는 역할만 맡는다.
+- DART는 일한도(status=020) 소진 시 `DartQuotaExceededError`를 던져, 호출부가 "그 기간에 공시가 없음"과 "한도 초과로 못 가져옴"을 구분할 수 있게 한다.
+- 서버·DB·캐시 계층 없이 호출한 프로세스 안에서 그때그때 요청 → 정규화 → 반환만 한다.
 
 httpx · BeautifulSoup4 · pydantic 만으로 돌아간다 — 상시 구동 서버, DB, 캐시 계층이 없다. 호출한 쪽이 원하는 만큼만 부르고, 저장이 필요하면 호출하는 쪽에서 알아서 한다 (예: [quant-airflow](https://github.com/younghwan91/quant-airflow)가 이 라이브러리로 수집해 TimescaleDB에 적재).
 
