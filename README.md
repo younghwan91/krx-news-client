@@ -81,19 +81,7 @@ disclosures = await scraper.scrape_disclosures()
 | `published_at` | 발행 시각 |
 | `collected_at` | 수집 시각 |
 
-`Disclosure`
-
-| 필드 | 설명 |
-|---|---|
-| `id` | 고유 ID |
-| `source` | 소스 |
-| `title` | 공시 제목 |
-| `url` | 원문 링크 |
-| `company` | 회사명 |
-| `ticker` | 종목코드 |
-| `disclosure_type` | 공시 유형 |
-| `published_at` | 공시 시각 |
-| `collected_at` | 수집 시각 |
+`Disclosure`는 `company`·`ticker`·`disclosure_type`(공시 유형)을 빼면 위와 같은 형태다.
 
 ## 구조
 
@@ -123,15 +111,13 @@ flowchart LR
     Client -->|list[NewsArticle]\n / list[Disclosure]| Caller
 ```
 
-- `BaseScraper`가 httpx 클라이언트 수명 관리, 요청 간 랜덤 지연, HTTP 오류·429 재시도를 공통으로 처리하고, `TossScraper`/`DartScraper`는 각 매체의 응답을 파싱해 정규화된 스키마로 변환하는 역할만 맡는다.
-- DART는 일한도(status=020) 소진 시 `DartQuotaExceededError`를 던져, 호출부가 "그 기간에 공시가 없음"과 "한도 초과로 못 가져옴"을 구분할 수 있게 한다.
+`BaseScraper`가 재시도·429 백오프 등 공통 처리를 맡고, 각 스크레이퍼는 매체 응답을 파싱해 정규화된 스키마로 변환하는 일만 한다. DART는 일한도(status=020) 소진 시 `DartQuotaExceededError`를 던져 "공시 없음"과 "한도 초과"를 구분할 수 있게 한다.
 
-httpx · BeautifulSoup4 · pydantic 만으로 돌아간다. 저장이 필요하면 호출하는 쪽에서 알아서 한다 (예: [quant-airflow](https://github.com/younghwan91/quant-airflow)가 이 라이브러리로 수집해 TimescaleDB에 적재).
+저장이 필요하면 호출하는 쪽에서 알아서 한다 (예: [quant-airflow](https://github.com/younghwan91/quant-airflow)가 이 라이브러리로 수집해 TimescaleDB에 적재).
 
 ## 라이선스
 
 Apache License 2.0 — 전문은 [LICENSE](LICENSE) 참조.
----
 
 ## ⭐ 도움이 되셨다면
 
