@@ -81,7 +81,7 @@ disclosures = await scraper.scrape_disclosures()
 | `published_at` | 발행 시각 |
 | `collected_at` | 수집 시각 |
 
-`Disclosure`는 `company`·`ticker`·`disclosure_type`(공시 유형)을 빼면 위와 같은 형태다.
+`Disclosure`는 `id`·`source`·`title`·`url`·`published_at`·`collected_at`은 같고, `category`·`content`·`summary`·`tickers`·`author`는 없는 대신 `company`·`ticker`·`disclosure_type`(공시 유형)이 있다.
 
 ## 구조
 
