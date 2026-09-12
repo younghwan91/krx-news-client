@@ -5,10 +5,16 @@ import logging
 import urllib.parse
 from datetime import datetime
 
-from krx_news_client.models.schemas import NewsArticle, NewsCategory, NewsSource
+from krx_news_client.models.schemas import KST, NewsArticle, NewsCategory, NewsSource
 from krx_news_client.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
+
+# 토스가 주는 ``createdAt``은 오프셋 없는 KST 벽시계다("2026-09-05T18:10:12").
+# 그대로 naive 로 두면 소비자가 ``timestamptz`` 컬럼(세션 TZ=UTC)에 넣는 순간
+# 9시간 미래로 밀린다 — 2026-09-13 실제로 그렇게 밀려 있는 걸 발견해 고쳤다
+# (quant-airflow news_articles 의 시각 분포가 장중엔 비고 저녁 17~18시에 몰려
+# 보였다. 9시간 되돌리면 장전 08시·개장 09시·마감 15시 피크로 정확히 맞는다).
 
 DASHBOARD_NEWS_URL = "https://wts-info-api.tossinvest.com/api/v1/dashboard/wts/news"
 
@@ -87,9 +93,18 @@ class TossScraper(BaseScraper):
 
     @staticmethod
     def _parse_date(text: str | None) -> datetime | None:
+        """토스 ``createdAt``을 **tz 있는** datetime 으로 읽는다.
+
+        오프셋이 없으면 KST 로 간주한다(토스는 한국 서비스이고, 실측 시각 분포가
+        KST 장 시간대와 맞는다 — 모듈 상단 ``KST`` 주석 참고). 오프셋이 붙어
+        오면 그걸 그대로 존중한다.
+        """
         if not text:
             return None
         try:
-            return datetime.fromisoformat(text)
+            parsed = datetime.fromisoformat(text)
         except ValueError:
             return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=KST)
+        return parsed

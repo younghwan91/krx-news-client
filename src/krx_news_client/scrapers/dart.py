@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from krx_news_client.models.schemas import Disclosure, NewsArticle, NewsSource
+from krx_news_client.models.schemas import KST, Disclosure, NewsArticle, NewsSource
 from krx_news_client.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,9 @@ class DartScraper(BaseScraper):
             logger.warning("DART API key not configured – skipping disclosure scrape")
             return []
 
-        today = datetime.now()
+        # 기본 범위(어제~오늘)는 **KST 기준 영업일**이어야 한다 — UTC 로 재면
+        # KST 09:00 이전엔 하루 전 날짜가 나온다.
+        today = datetime.now(tz=KST)
         yesterday = today - timedelta(days=1)
         bgn_de = bgn_de or yesterday.strftime("%Y%m%d")
         end_de = end_de or today.strftime("%Y%m%d")
@@ -101,9 +103,12 @@ class DartScraper(BaseScraper):
                 rcept_dt = item.get("rcept_dt", "")
 
                 try:
-                    published_at = datetime.strptime(rcept_dt, "%Y%m%d")
+                    # rcept_dt 는 접수'일'(KST)이라 시각이 없다 — 00:00 KST 로 둔다.
+                    # tz 를 붙이는 이유는 toss.py 의 ``KST`` 주석과 같다: naive 로
+                    # 두면 소비자의 timestamptz 컬럼에서 9시간 밀린다(날짜까지 넘어간다).
+                    published_at = datetime.strptime(rcept_dt, "%Y%m%d").replace(tzinfo=KST)
                 except (ValueError, TypeError):
-                    published_at = datetime.now()
+                    published_at = datetime.now(tz=KST)
 
                 disclosure = self._make_disclosure(
                     title=item.get("report_nm", ""),

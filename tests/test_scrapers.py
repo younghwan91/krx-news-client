@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, timedelta
+
 import pytest
 
 from krx_news_client.models.schemas import NewsArticle, NewsCategory, NewsSource
@@ -107,7 +109,9 @@ class TestTossScraper:
         assert article.title == item["title"]
         assert article.author == "조선비즈"
         assert article.tickers == ["005490", "004020"]
-        assert article.published_at.isoformat() == "2026-09-05T18:10:12"
+        # KST 오프셋이 붙어야 한다 — naive 로 두면 소비자 timestamptz 에서 9시간
+        # 밀린다(2026-09-13 사고, _parse_date 주석 참고).
+        assert article.published_at.isoformat() == "2026-09-05T18:10:12+09:00"
 
     def test_parse_item_without_related_stocks(self):
         scraper = TossScraper()
@@ -131,6 +135,25 @@ class TestTossScraper:
     def test_parse_date_invalid(self):
         assert TossScraper._parse_date("not-a-date") is None
         assert TossScraper._parse_date(None) is None
+
+    def test_parse_date_treats_naive_as_kst(self):
+        """토스 createdAt 은 오프셋 없는 KST 벽시계다.
+
+        naive 로 흘리면 소비자(quant-airflow)가 timestamptz 컬럼에 넣는 순간
+        UTC 로 읽혀 9시간 미래로 밀린다 — 2026-09-13 실제로 그렇게 쌓여 있던
+        걸 발견해 고쳤다. 여기서 그 회귀를 막는다.
+        """
+        got = TossScraper._parse_date("2026-09-05T18:10:12")
+        assert got is not None
+        assert got.tzinfo is not None
+        assert got.utcoffset() == timedelta(hours=9)
+        # UTC 로 환산하면 같은 날 09:10 — 저장 시 밀리지 않는다.
+        assert got.astimezone(UTC).isoformat() == "2026-09-05T09:10:12+00:00"
+
+    def test_parse_date_respects_explicit_offset(self):
+        got = TossScraper._parse_date("2026-09-05T18:10:12+00:00")
+        assert got is not None
+        assert got.utcoffset() == timedelta(0)
 
 
 class TestDartScraper:
