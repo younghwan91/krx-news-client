@@ -35,15 +35,32 @@ class DartScraper(BaseScraper):
     async def scrape_news(self) -> list[NewsArticle]:
         return []
 
-    async def scrape_disclosures(self) -> list[Disclosure]:
+    async def scrape_disclosures(
+        self,
+        *,
+        bgn_de: str | None = None,
+        end_de: str | None = None,
+        corp_cls: str | None = None,
+    ) -> list[Disclosure]:
+        """Fetch disclosures for a date range.
+
+        Args:
+            bgn_de: Range start, ``YYYYMMDD``. Defaults to yesterday (the
+                "recent news feed" use case this scraper was originally
+                built for) when omitted.
+            end_de: Range end, ``YYYYMMDD``. Defaults to today when omitted.
+            corp_cls: DART's listing-market filter (``Y``=KOSPI, ``K``=KOSDAQ,
+                ``N``=KONEX, ``E``=기타). ``None`` fetches all markets, matching
+                DART's own default when the param is absent.
+        """
         if not self.api_key:
             logger.warning("DART API key not configured – skipping disclosure scrape")
             return []
 
         today = datetime.now()
         yesterday = today - timedelta(days=1)
-        bgn_de = yesterday.strftime("%Y%m%d")
-        end_de = today.strftime("%Y%m%d")
+        bgn_de = bgn_de or yesterday.strftime("%Y%m%d")
+        end_de = end_de or today.strftime("%Y%m%d")
 
         disclosures: list[Disclosure] = []
         page_no = 1
@@ -56,6 +73,8 @@ class DartScraper(BaseScraper):
                 "page_no": str(page_no),
                 "page_count": "100",
             }
+            if corp_cls:
+                params["corp_cls"] = corp_cls
 
             try:
                 resp = await self.fetch(f"{self.base_url}/list.json", params=params)

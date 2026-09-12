@@ -179,3 +179,30 @@ class TestDartScraper:
         assert len(result) == 1
         assert result[0].ticker == "005930"
         assert result[0].company == "삼성전자"
+
+    @pytest.mark.asyncio
+    async def test_scrape_disclosures_uses_explicit_date_range(self, httpx_mock):
+        # 명시적 bgn_de/end_de 를 주면 그대로 요청 파라미터에 실려야 한다 —
+        # 기본값(어제~오늘)으로 조용히 덮어쓰이면 히스토리 백필이 못 쓰인다.
+        httpx_mock.add_response(json={"status": "013", "message": "없음"})
+        scraper = DartScraper(api_key="dummy")
+        try:
+            await scraper.scrape_disclosures(bgn_de="20260101", end_de="20260107")
+        finally:
+            await scraper.close()
+        request = httpx_mock.get_requests()[0]
+        params = dict(request.url.params)
+        assert params["bgn_de"] == "20260101"
+        assert params["end_de"] == "20260107"
+        assert "corp_cls" not in params
+
+    @pytest.mark.asyncio
+    async def test_scrape_disclosures_passes_corp_cls_when_given(self, httpx_mock):
+        httpx_mock.add_response(json={"status": "013", "message": "없음"})
+        scraper = DartScraper(api_key="dummy")
+        try:
+            await scraper.scrape_disclosures(corp_cls="Y")
+        finally:
+            await scraper.close()
+        request = httpx_mock.get_requests()[0]
+        assert dict(request.url.params)["corp_cls"] == "Y"
