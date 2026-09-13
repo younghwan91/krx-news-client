@@ -42,6 +42,17 @@ class DartScraper(BaseScraper):
     source = NewsSource.DART
     base_url = "https://opendart.fss.or.kr/api"
 
+    #: BaseScraper's 0.5-2.0s randomized delay exists to be polite to Toss's
+    #: unofficial dashboard scrape. DART is an official, keyed API whose only
+    #: real constraint is the daily quota (enforced server-side via status
+    #: 020, handled by key rotation above) -- inheriting Toss's throttle here
+    #: would make a multi-year backfill (tens of thousands of calls) take
+    #: hours instead of minutes for no correctness benefit. A caller wanting
+    #: to be gentler can still pass ``sleep`` at the call site (scalp-it's
+    #: former adapter did, at 0.05s).
+    min_delay: float = 0.0
+    max_delay: float = 0.0
+
     def __init__(self, api_key: str | Sequence[str]) -> None:
         """Args:
         api_key: 단일 키(문자열) 또는 여러 키(로테이션용 시퀀스). 여러 키는
