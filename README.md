@@ -49,8 +49,19 @@ DART 공시는 API 키가 필요하다:
 from krx_news_client import DartScraper
 
 scraper = DartScraper(api_key="...")
-disclosures = await scraper.scrape_disclosures()
+disclosures = await scraper.scrape_disclosures()  # 기본: 어제~오늘(KST), 전체 시장
 ```
+
+날짜 범위·시장을 직접 지정하거나, 여러 키를 순환시켜 일 20,000건 한도를 넘는 대량 백필도 가능하다:
+
+```python
+scraper = DartScraper(api_key=["key1", "key2", "key3"])  # 한도 초과 시 다음 키로 자동 전환
+disclosures = await scraper.scrape_disclosures(
+    bgn_de="20250101", end_de="20250331", corp_cls="Y"  # Y=코스피, K=코스닥, N=코넥스
+)
+```
+
+정규화된 `Disclosure`가 아니라 DART 원본 응답이 필요하면 `search_disclosures`(한 페이지)/`search_disclosures_all`(전 페이지)을 쓴다 — 결측을 조용히 넘기지 않고 `DartAPIError`를 그대로 올리는 엄격 경로라 백필에 적합하다.
 
 더 많은 예제는 [`examples/`](examples/) 참고.
 
@@ -111,7 +122,7 @@ flowchart LR
     Client -->|list[NewsArticle]\n / list[Disclosure]| Caller
 ```
 
-`BaseScraper`가 재시도·429 백오프 등 공통 처리를 맡고, 각 스크레이퍼는 매체 응답을 파싱해 정규화된 스키마로 변환하는 일만 한다. DART는 일한도(status=020) 소진 시 `DartQuotaExceededError`를 던져 "공시 없음"과 "한도 초과"를 구분할 수 있게 한다.
+`BaseScraper`가 재시도·429 백오프 등 공통 처리를 맡고, 각 스크레이퍼는 매체 응답을 파싱해 정규화된 스키마로 변환하는 일만 한다. DART는 키가 여럿이면 한도 초과 시 다음 키로 자동 전환하고, 전부 소진되면 `DartQuotaExceededError`를 던져 "공시 없음"(status=013)과 "한도 초과"(status=020)를 구분할 수 있게 한다. 그 외 오류 상태는 `DartAPIError` — `search_disclosures*`는 이를 그대로 올리고(엄격), `scrape_disclosures`는 페이지 단위로 로그만 남기고 계속한다(관용적, 실시간 폴링용).
 
 저장이 필요하면 호출하는 쪽에서 알아서 한다 (예: [quant-airflow](https://github.com/younghwan91/quant-airflow)가 이 라이브러리로 수집해 TimescaleDB에 적재).
 
