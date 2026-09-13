@@ -6,7 +6,7 @@ import pytest
 
 from krx_news_client.models.schemas import NewsArticle, NewsCategory, NewsSource
 from krx_news_client.scrapers.base import BaseScraper, make_article_id
-from krx_news_client.scrapers.dart import DartQuotaExceededError, DartScraper
+from krx_news_client.scrapers.dart import DartAPIError, DartQuotaExceededError, DartScraper
 from krx_news_client.scrapers.toss import TossScraper, build_article_url
 
 
@@ -179,21 +179,23 @@ class TestDartScraper:
 
     @pytest.mark.asyncio
     async def test_scrape_disclosures_parses_list(self, httpx_mock):
-        httpx_mock.add_response(json={
-            "status": "000",
-            "message": "정상",
-            "page_no": 1,
-            "total_page": 1,
-            "list": [
-                {
-                    "rcept_no": "20260905000123",
-                    "corp_name": "삼성전자",
-                    "stock_code": "005930",
-                    "report_nm": "주요사항보고서",
-                    "rcept_dt": "20260905",
-                },
-            ],
-        })
+        httpx_mock.add_response(
+            json={
+                "status": "000",
+                "message": "정상",
+                "page_no": 1,
+                "total_page": 1,
+                "list": [
+                    {
+                        "rcept_no": "20260905000123",
+                        "corp_name": "삼성전자",
+                        "stock_code": "005930",
+                        "report_nm": "주요사항보고서",
+                        "rcept_dt": "20260905",
+                    },
+                ],
+            }
+        )
         scraper = DartScraper(api_key="dummy")
         try:
             result = await scraper.scrape_disclosures()
@@ -229,3 +231,128 @@ class TestDartScraper:
             await scraper.close()
         request = httpx_mock.get_requests()[0]
         assert dict(request.url.params)["corp_cls"] == "Y"
+
+
+class TestDartScraperMultiKeyAndRawSearch:
+    """다중 키 로테이션 + raw row 검색 -- scalp-it의 10년 백필용
+    ``adapters/dart.py``에 있던 로직을 여기로 옮긴 부분. Disclosure 모델에는
+    없는 ``rcept_no``/``corp_cls`` 원본 필드가 필요한 호출부를 위한 것이다.
+    """
+
+    def test_single_key_still_works_via_api_key_alias(self):
+        scraper = DartScraper(api_key="dummy")
+        assert scraper.api_keys == ["dummy"]
+        assert scraper.api_key == "dummy"
+
+    @pytest.mark.asyncio
+    async def test_search_disclosures_returns_raw_payload(self, httpx_mock):
+        httpx_mock.add_response(
+            json={
+                "status": "000",
+                "message": "정상",
+                "page_no": 1,
+                "total_page": 1,
+                "list": [{"rcept_no": "20260814000123", "corp_cls": "K", "stock_code": "073540"}],
+            }
+        )
+        scraper = DartScraper(api_key="k1")
+        try:
+            payload = await scraper.search_disclosures(
+                bgn_de="20260810", end_de="20260814", corp_cls="K"
+            )
+        finally:
+            await scraper.close()
+        assert payload["list"][0]["rcept_no"] == "20260814000123"
+        assert payload["list"][0]["corp_cls"] == "K"
+
+    @pytest.mark.asyncio
+    async def test_rate_limited_key_falls_through_to_next(self, httpx_mock):
+        httpx_mock.add_response(json={"status": "020", "message": "요청 제한을 초과하였습니다."})
+        httpx_mock.add_response(
+            json={
+                "status": "000",
+                "message": "정상",
+                "page_no": 1,
+                "total_page": 1,
+                "list": [{"rcept_no": "1"}],
+            }
+        )
+        scraper = DartScraper(api_key=["k1", "k2"])
+        try:
+            payload = await scraper.search_disclosures(bgn_de="20260810", end_de="20260814")
+        finally:
+            await scraper.close()
+        assert payload["list"][0]["rcept_no"] == "1"
+        keys_used = [dict(r.url.params)["crtfc_key"] for r in httpx_mock.get_requests()]
+        assert keys_used == ["k1", "k2"]
+
+    @pytest.mark.asyncio
+    async def test_all_keys_rate_limited_raises_quota_exceeded(self, httpx_mock):
+        httpx_mock.add_response(json={"status": "020", "message": "초과"})
+        httpx_mock.add_response(json={"status": "020", "message": "초과"})
+        scraper = DartScraper(api_key=["k1", "k2"])
+        try:
+            with pytest.raises(DartQuotaExceededError):
+                await scraper.search_disclosures(bgn_de="20260810", end_de="20260814")
+        finally:
+            await scraper.close()
+
+    @pytest.mark.asyncio
+    async def test_other_error_status_raises_dart_api_error(self, httpx_mock):
+        httpx_mock.add_response(json={"status": "010", "message": "등록되지 않은 키입니다."})
+        scraper = DartScraper(api_key="k1")
+        try:
+            with pytest.raises(DartAPIError):
+                await scraper.search_disclosures(bgn_de="20260101", end_de="20260101")
+        finally:
+            await scraper.close()
+
+    @pytest.mark.asyncio
+    async def test_search_disclosures_all_walks_every_page(self, httpx_mock):
+        for page in (1, 2, 3):
+            httpx_mock.add_response(
+                json={
+                    "status": "000",
+                    "message": "정상",
+                    "page_no": page,
+                    "total_page": 3,
+                    "list": [{"rcept_no": f"page{page}"}],
+                }
+            )
+        scraper = DartScraper(api_key="k1")
+        try:
+            rows = await scraper.search_disclosures_all(
+                bgn_de="20260810", end_de="20260814", corp_cls="K"
+            )
+        finally:
+            await scraper.close()
+        assert [r["rcept_no"] for r in rows] == ["page1", "page2", "page3"]
+
+    @pytest.mark.asyncio
+    async def test_scrape_disclosures_keeps_partial_results_on_mid_stream_error(self, httpx_mock):
+        # 1페이지 성공, 2페이지에서 예상치 못한 오류 -- lenient 경로(scrape_disclosures)는
+        # 예외를 던지지 않고 1페이지분만 반환해야 한다 (기존 동작 보존).
+        httpx_mock.add_response(
+            json={
+                "status": "000",
+                "message": "정상",
+                "page_no": 1,
+                "total_page": 2,
+                "list": [
+                    {
+                        "rcept_no": "ok",
+                        "corp_name": "삼성전자",
+                        "stock_code": "005930",
+                        "rcept_dt": "20260905",
+                    }
+                ],
+            }
+        )
+        httpx_mock.add_response(json={"status": "999", "message": "알수없는오류"})
+        scraper = DartScraper(api_key="k1")
+        try:
+            result = await scraper.scrape_disclosures(bgn_de="20260905", end_de="20260906")
+        finally:
+            await scraper.close()
+        assert len(result) == 1
+        assert result[0].ticker == "005930"
