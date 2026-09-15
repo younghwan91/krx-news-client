@@ -24,13 +24,10 @@ import asyncio
 from krx_news_client import TossScraper
 
 async def main():
-    scraper = TossScraper()
-    try:
+    async with TossScraper() as scraper:
         articles = await scraper.scrape_news()
         for article in articles[:5]:
-            print(article.title, article.published_at)
-    finally:
-        await scraper.close()
+            print(article.nation, article.title, article.published_at)
 
 asyncio.run(main())
 ```
@@ -38,9 +35,23 @@ asyncio.run(main())
 실행하면 이런 식으로 출력된다:
 
 ```
-코스피, 외국인 순매수에 2%대 상승 마감 2025-06-10 15:30:00+09:00
-삼성전자, 3분기 실적 시장 예상 상회 2025-06-10 14:05:00+09:00
+KR 코스피, 외국인 순매수에 2%대 상승 마감 2025-06-10 15:30:00+09:00
+US 엔비디아, 실적 발표 앞두고 강세 2025-06-10 14:05:00+09:00
 ...
+```
+
+토스 대시보드 피드는 **현재 스냅샷**이다. 해외(`nation="US"`) 기사가 절반 넘게 섞여 있고, 본문(`content`)은 비어 있으며, 과거로 넘길 수 없다. 본문과 과거 기사는 따로 가져온다:
+
+```python
+from datetime import date
+from krx_news_client import TossScraper
+
+async with TossScraper() as scraper:
+    detail = await scraper.fetch_article_detail(articles[0].url)  # 본문 전체·감성 라벨·언론사 원문 URL
+    history = await scraper.scrape_company_news(                  # 종목별 뉴스, 과거로 페이징
+        "005930", since=date(2025, 6, 1), max_pages=20     # date 는 그날 00:00 KST
+    )
+    items, _ = await scraper.company_news_page("005930", number=1)  # 원본 dict 한 페이지
 ```
 
 DART 공시는 API 키가 필요하다:
@@ -48,8 +59,8 @@ DART 공시는 API 키가 필요하다:
 ```python
 from krx_news_client import DartScraper
 
-scraper = DartScraper(api_key="...")
-disclosures = await scraper.scrape_disclosures()  # 기본: 어제~오늘(KST), 전체 시장
+async with DartScraper(api_key="...") as scraper:   # 또는 DartScraper.from_env()
+    disclosures = await scraper.scrape_disclosures()  # 기본: 어제~오늘(KST), 전체 시장
 ```
 
 날짜 범위·시장을 직접 지정하거나, 여러 키를 순환시켜 일 20,000건 한도를 넘는 대량 백필도 가능하다:
@@ -61,7 +72,26 @@ disclosures = await scraper.scrape_disclosures(
 )
 ```
 
-정규화된 `Disclosure`가 아니라 DART 원본 응답이 필요하면 `search_disclosures`(한 페이지)/`search_disclosures_all`(전 페이지)을 쓴다 — 결측을 조용히 넘기지 않고 `DartAPIError`를 그대로 올리는 엄격 경로라 백필에 적합하다.
+정규화된 `Disclosure`가 아니라 DART 원본 응답이 필요하면 `search_disclosures`(한 페이지)/`search_disclosures_all`(전 페이지)/`search_disclosures_range`(여러 해·여러 시장)를 쓴다 — 결측을 조용히 넘기지 않고 `DartAPIError`를 그대로 올리는 엄격 경로라 백필에 적합하다. DART는 기업을 지정하지 않은 검색을 **달력 3개월**로 제한하는데, `search_disclosures_range`가 `quarter_ranges`로 알아서 쪼갠다:
+
+```python
+rows = await scraper.search_disclosures_range(bgn_de="20160901", end_de="20260915", corp_cls=["Y", "K"])
+docs = await scraper.fetch_document(rows[0]["rcept_no"])  # 공시 원문(document.xml) → DisclosureDocument.text
+```
+
+폴링할 때는 `Deduplicator`로 처음 본 것만 넘긴다(기사는 `id`, 공시는 접수번호 기준):
+
+```python
+from krx_news_client import Deduplicator
+
+dedup = Deduplicator()
+while True:
+    for article in dedup.filter_new(await toss.scrape_news()):
+        handle(article)
+    await asyncio.sleep(180)
+```
+
+같은 스크레이퍼를 `asyncio.run`으로 여러 번 불러도 된다 — 이벤트 루프가 바뀌면 HTTP 클라이언트를 새로 만든다(0.3.x까지는 두 번째 호출이 조용히 일부 결과를 잃었다).
 
 더 많은 예제는 [`examples/`](examples/) 참고.
 
@@ -69,10 +99,22 @@ disclosures = await scraper.scrape_disclosures(
 
 | 소스 | 데이터 | 수집 방식 |
 |---|---|---|
-| DART (dart.fss.or.kr) | 공시 | 공식 Open API (키 필요) |
-| 토스증권 (tossinvest.com) | 뉴스 | 비공식 내부 API |
+| DART (dart.fss.or.kr) | 공시 목록·원문 | 공식 Open API (키 필요) |
+| 토스증권 (tossinvest.com) | 대시보드 뉴스·기사 본문·종목별 뉴스 | 비공식 내부 API |
 
 수집한 기사는 매체와 무관하게 `NewsArticle`, 공시는 `Disclosure` 한 벌로 정규화한다. 소스가 늘어도 호출 코드는 그대로다.
+
+### 토스 사용 시 주의
+
+토스는 **비공식 내부 API**라 예고 없이 막히거나 형식이 바뀔 수 있다. 형식이 바뀌면 종목별 뉴스 경로는 빈 결과 대신 `TossResponseError`를 올린다. 종목별 뉴스(`/api/v2/news/companies/{code}`)에서 직접 확인한 함정은 다음과 같다(2026-09-15).
+
+- **코드는 6자리만** 받는다. `A005930`이나 ISIN을 넣으면 토스는 오류 없이 0건을 준다. 그래서 라이브러리가 `A` 접두어는 벗기고, 그 외 형식이면 `ValueError`를 낸다.
+- **페이지 번호는 1부터** 시작한다. `number=0`이면 토스가 400을 주므로 호출 전에 `ValueError`를 낸다.
+- **`lastPage`를 믿을 수 없다.** 페이지가 `size`보다 몇 건만 모자라도 뒤에 페이지가 남아 있는데 `True`가 온다. 그래서 `scrape_company_news`는 빈 페이지가 나올 때까지 넘긴다.
+- **순서가 대략적이다.** 페이지 안에서도 정렬돼 있지 않고, 이웃 페이지끼리 시각이 하루쯤 겹친다. 그래서 `since`는 페이지 전체가 그보다 오래됐을 때만 멈추는 조건으로 쓰고, 결과는 id로 중복을 걷어낸 뒤 최신순으로 정렬해 돌려준다.
+- **시장 전체 기사가 섞인다.** "코스피 마감" 같은 기사는 `stockCodes`가 없으므로 `tickers`가 비어 있다.
+
+요청 간격은 `BaseScraper`의 0.5~1.5초 무작위 지연을 토스에도 그대로 쓴다. 비공식 API라 보수적으로 두는 편이 차단 위험이 낮기 때문이다. 속도가 필요하면 `scraper.min_delay`와 `scraper.max_delay`로 조절한다. DART는 공식 API이고 일한도만 제약이라 지연이 0이다.
 
 ## 응답 필드
 
@@ -85,14 +127,29 @@ disclosures = await scraper.scrape_disclosures(
 | `category` | `disclosure`/`market`/`stock`/`economy`/`analysis`/`breaking` |
 | `title` | 제목 |
 | `url` | 원문 링크 |
-| `content` | 본문 (있는 경우) |
+| `content` | 본문 (`fetch_article_detail`·`scrape_company_news`에서 채워짐) |
 | `summary` | 요약 |
-| `tickers` | 관련 종목코드 목록 (e.g. `005930`) |
+| `tickers` | 관련 종목코드 목록. 한국 종목은 6자리(e.g. `005930`), 해외 종목은 토스 원본 코드 |
 | `author` | 작성자·언론사 |
-| `published_at` | 발행 시각 |
+| `published_at` | 발행 시각 (KST, tz 포함) |
 | `collected_at` | 수집 시각 |
+| `news_id` | 토스 기사 ID |
+| `nation` | 기사 대상 시장 (`KR`/`US`) |
+| `sentiment` | 토스 감성 라벨 (상세 조회 시) |
+| `original_url` | 언론사 원문 URL (상세 조회 시) |
 
-`Disclosure`는 `id`·`source`·`title`·`url`·`published_at`·`collected_at`은 같고, `category`·`content`·`summary`·`tickers`·`author`는 없는 대신 `company`·`ticker`·`disclosure_type`(공시 유형)이 있다.
+`Disclosure`는 `id`·`source`·`title`·`url`·`published_at`·`collected_at`은 같고, `category`·`content`·`summary`·`tickers`·`author`는 없는 대신 다음이 있다.
+
+| 필드 | 설명 |
+|---|---|
+| `company` · `ticker` | 회사명 · 종목코드 (비상장이면 빈 문자열) |
+| `disclosure_type` | 공시 제목(`report_nm`) 그대로 |
+| `rcept_no` | 접수번호 — 같은 날 공시의 순서, 중복 제거 키 |
+| `corp_code` · `corp_cls` | DART 고유번호 · 법인구분(`Y`/`K`/`N`/`E`) |
+| `rm` | DART 비고 |
+| `is_correction` | `[기재정정]`·`[첨부정정]` 등으로 시작하는 정정 공시인가 |
+
+`published_at`은 접수**일**의 00:00 KST다 — DART 목록 API에는 접수 시각이 없다.
 
 ## 구조
 
@@ -102,10 +159,10 @@ flowchart LR
 
     subgraph Client["krx-news-client"]
         direction TB
-        Toss["TossScraper\n.scrape_news()"]
-        Dart["DartScraper\n.scrape_disclosures()"]
+        Toss["TossScraper\n.scrape_news()\n.fetch_article_detail()\n.scrape_company_news()"]
+        Dart["DartScraper\n.scrape_disclosures()\n.search_disclosures_range()\n.fetch_document()"]
         Base["BaseScraper\nUA 순환 · 간격 조절(throttle)\n재시도 · 429 백오프"]
-        Schema["schemas.py\nNewsArticle · Disclosure"]
+        Schema["schemas.py\nNewsArticle · Disclosure\nDisclosureDocument"]
 
         Toss --> Base
         Dart --> Base
@@ -117,12 +174,12 @@ flowchart LR
     DartAPI[("DART\nopendart.fss.or.kr\n(공식 Open API)")]
 
     Caller -->|await scraper.scrape_news()\n / scrape_disclosures()| Client
-    Base -->|POST 대시보드 피드| TossAPI
-    Base -->|GET list.json| DartAPI
+    Base -->|POST 대시보드 피드\nGET 기사 상세·종목별 뉴스| TossAPI
+    Base -->|GET list.json\n/ document.xml| DartAPI
     Client -->|list[NewsArticle]\n / list[Disclosure]| Caller
 ```
 
-`BaseScraper`가 재시도·429 백오프 등 공통 처리를 맡고, 각 스크레이퍼는 매체 응답을 파싱해 정규화된 스키마로 변환하는 일만 한다. DART는 키가 여럿이면 한도 초과 시 다음 키로 자동 전환하고, 전부 소진되면 `DartQuotaExceededError`를 던져 "공시 없음"(status=013)과 "한도 초과"(status=020)를 구분할 수 있게 한다. 그 외 오류 상태는 `DartAPIError` — `search_disclosures*`는 이를 그대로 올리고(엄격), `scrape_disclosures`는 페이지 단위로 로그만 남기고 계속한다(관용적, 실시간 폴링용).
+`BaseScraper`가 재시도(429·5xx만)·429 백오프 등 공통 처리를 맡고, 각 스크레이퍼는 매체 응답을 파싱해 정규화된 스키마로 변환하는 일만 한다. DART는 키가 여럿이면 한도 초과 시 다음 키로 자동 전환하고, 전부 소진되면 `DartQuotaExceededError`를 던져 "공시 없음"(status=013)과 "한도 초과"(status=020)를 구분할 수 있게 한다. 그 외 오류 상태는 `DartAPIError` — `search_disclosures*`는 이를 그대로 올리고(엄격), `scrape_disclosures`는 페이지 단위로 로그만 남기고 계속한다(관용적, 실시간 폴링용).
 
 저장이 필요하면 호출하는 쪽에서 알아서 한다 (예: [quant-airflow](https://github.com/younghwan91/quant-airflow)가 이 라이브러리로 수집해 TimescaleDB에 적재).
 
