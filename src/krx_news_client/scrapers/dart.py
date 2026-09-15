@@ -1,16 +1,38 @@
 from __future__ import annotations
 
+import calendar
+import io
 import logging
-from collections.abc import Sequence
-from datetime import datetime, timedelta
+import os
+import re
+import zipfile
+from collections.abc import Mapping, Sequence
+from datetime import date, datetime, timedelta
 from typing import Any
 
-from krx_news_client.models.schemas import KST, Disclosure, NewsArticle, NewsSource
+from bs4 import BeautifulSoup
+
+from krx_news_client.models.schemas import (
+    KST,
+    Disclosure,
+    DisclosureDocument,
+    NewsArticle,
+    NewsSource,
+    is_correction,
+)
 from krx_news_client.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
 
 DETAIL_URL = "https://dart.fss.or.kr/dsaf001/main.do?rcept_no={rcept_no}"
+
+#: ``from_env`` 가 순서대로 읽는 환경변수(scalp-it ``adapters/dart.py`` 와 같은 이름).
+DEFAULT_KEY_ENV = ("DART_API_KEY", "DART_API_KEY_2", "DART_API_KEY_3")
+
+#: ``corp_code`` 없이 list.json 을 부르면 검색기간이 **달력 3개월**로 제한된다
+#: (``100 corp_code가 없는 경우 검색기간은 3개월만 가능합니다``). 90일 고정으로
+#: 자르면 2월이 낀 구간에서 이 오류가 난다.
+MAX_SPAN_MONTHS = 3
 
 #: DART 응답 status. 일한도 소진 시 이 값이 온다.
 QUOTA_EXHAUSTED_STATUS = "020"
@@ -36,6 +58,48 @@ class DartAPIError(Exception):
     ``scrape_disclosures``(기존 "최근 뉴스 피드" 용도)는 이 오류를 페이지
     단위로 잡아 로그만 남기고 계속하는 예전 관용적(lenient) 동작을 유지한다.
     """
+
+
+def _add_months(day: date, months: int) -> date:
+    """달력 월 더하기. 말일 넘침(1/31 + 1개월)은 그 달 말일로 자른다."""
+    month_index = day.month - 1 + months
+    year, month = day.year + month_index // 12, month_index % 12 + 1
+    return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
+
+
+def quarter_ranges(start: str, end: str) -> list[tuple[str, str]]:
+    """``[start, end]``(``YYYYMMDD``)를 **달력 3개월 이하** 구간들로 쪼갠다.
+
+    DART 가 ``corp_code`` 없는 검색을 3개월로 제한하므로 여러 해 백필은 이렇게
+    나눠 불러야 한다(scalp-it ``cli_dart.py`` 에서 옮김, pandas 의존 제거).
+    """
+    cursor = datetime.strptime(start, "%Y%m%d").date()
+    finish = datetime.strptime(end, "%Y%m%d").date()
+    ranges: list[tuple[str, str]] = []
+    while cursor <= finish:
+        stop = min(_add_months(cursor, MAX_SPAN_MONTHS) - timedelta(days=1), finish)
+        ranges.append((cursor.strftime("%Y%m%d"), stop.strftime("%Y%m%d")))
+        cursor = stop + timedelta(days=1)
+    return ranges
+
+
+def _html_to_text(markup: str) -> str:
+    soup = BeautifulSoup(markup, "lxml")
+    for tag in soup(["style", "script", "head"]):
+        tag.decompose()
+    text = soup.get_text("\n")
+    lines = (re.sub(r"[ \t\u00a0]+", " ", line).strip() for line in text.splitlines())
+    return "\n".join(line for line in lines if line)
+
+
+def _decode(raw: bytes) -> str:
+    # 원문 meta 는 euc-kr 이라고 적혀 있어도 실제 바이트는 UTF-8 인 경우가 많다.
+    for encoding in ("utf-8", "cp949"):
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="replace")
 
 
 class DartScraper(BaseScraper):
@@ -65,6 +129,24 @@ class DartScraper(BaseScraper):
         #: 단일 키만 쓰던 기존 호출부와의 하위호환(``self.api_key`` 참조).
         self.api_key = self.api_keys[0] if self.api_keys else ""
         self._key_cursor = 0
+
+    @classmethod
+    def from_env(
+        cls,
+        names: Sequence[str] = DEFAULT_KEY_ENV,
+        env: Mapping[str, str] | None = None,
+    ) -> DartScraper:
+        """환경변수(기본 ``DART_API_KEY``, ``_2``, ``_3``)에서 키를 모아 만든다.
+
+        설정된 키가 하나도 없으면 ``ValueError`` -- 키 없이 조용히 빈 결과를
+        내는 스크레이퍼를 만들지 않는다.
+        """
+        source = os.environ if env is None else env
+        keys = [str(source.get(name) or "").strip() for name in names]
+        keys = [k for k in keys if k]
+        if not keys:
+            raise ValueError(f"DART API key not configured (checked: {', '.join(names)})")
+        return cls(keys)
 
     def _next_key(self) -> str:
         key = self.api_keys[self._key_cursor % len(self.api_keys)]
@@ -132,8 +214,8 @@ class DartScraper(BaseScraper):
         """구간의 모든 페이지를 raw dict 리스트로 모은다.
 
         DART 자체가 ``corp_code`` 없는 검색을 달력 3개월로 제한한다 -- 여러
-        해에 걸친 백필은 호출부가 구간을 쪼개야 한다(scalp-it의
-        ``cli_dart.py.quarter_ranges``가 참조 구현).
+        해에 걸친 백필은 구간을 쪼개야 한다 -- ``search_disclosures_range``를
+        쓰면 ``quarter_ranges``로 알아서 나눈다.
         """
         rows: list[dict[str, Any]] = []
         page = 1
@@ -146,6 +228,85 @@ class DartScraper(BaseScraper):
             if page >= total_page:
                 return rows
             page += 1
+
+    async def search_disclosures_range(
+        self,
+        *,
+        bgn_de: str,
+        end_de: str,
+        corp_cls: str | Sequence[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """3개월 제한을 넘는 기간도 한 번에. ``quarter_ranges`` × ``corp_cls`` 로 돈다.
+
+        Args:
+            corp_cls: 하나(``"Y"``), 여럿(``["Y", "K"]``), 또는 None(전체 시장).
+
+        엄격 경로다(``search_disclosures`` 와 같은 예외). 중간에 한도가 다 차면
+        ``DartQuotaExceededError`` 로 멈추므로, 이어받으려면 호출부가 구간 단위로
+        진행 상황을 기록할 것.
+        """
+        classes: list[str | None]
+        if corp_cls is None or isinstance(corp_cls, str):
+            classes = [corp_cls]
+        else:
+            classes = list(corp_cls)
+        rows: list[dict[str, Any]] = []
+        for bgn, stop in quarter_ranges(bgn_de, end_de):
+            for cls_ in classes:
+                rows.extend(
+                    await self.search_disclosures_all(bgn_de=bgn, end_de=stop, corp_cls=cls_)
+                )
+        return rows
+
+    async def fetch_document(self, rcept_no: str) -> list[DisclosureDocument]:
+        """공시 원문(``document.xml``). 접수번호 하나에 파일이 여럿일 수 있다.
+
+        DART 는 성공 시 zip 을, 실패 시 ``<result><status>`` XML 을 준다. 없는
+        접수번호(013)는 빈 리스트, 한도 초과(020)는 다음 키로 넘기고, 그 외
+        상태는 ``DartAPIError``.
+        """
+        if not self.api_keys:
+            raise DartQuotaExceededError("no DART API key configured")
+
+        last_message = ""
+        for _ in range(len(self.api_keys)):
+            resp = await self.fetch(
+                f"{self.base_url}/document.xml",
+                params={"crtfc_key": self._next_key(), "rcept_no": rcept_no},
+            )
+            content = resp.content
+            if content[:2] == b"PK":
+                return self._unzip_document(rcept_no, content)
+            status_match = re.search(rb"<status>(\d+)</status>", content)
+            message_match = re.search(rb"<message>(.*?)</message>", content, re.S)
+            status = status_match.group(1).decode() if status_match else "?"
+            message = _decode(message_match.group(1)) if message_match else ""
+            last_message = f"{status} {message}"
+            if status == _NO_DATA:
+                return []
+            if status != QUOTA_EXHAUSTED_STATUS:
+                raise DartAPIError(f"DART document error: {last_message}")
+        raise DartQuotaExceededError(
+            f"all {len(self.api_keys)} configured DART key(s) exhausted daily quota: {last_message}"
+        )
+
+    @staticmethod
+    def _unzip_document(rcept_no: str, content: bytes) -> list[DisclosureDocument]:
+        documents: list[DisclosureDocument] = []
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            for info in archive.infolist():
+                if info.is_dir():
+                    continue
+                markup = _decode(archive.read(info))
+                documents.append(
+                    DisclosureDocument(
+                        rcept_no=rcept_no,
+                        filename=info.filename,
+                        html=markup,
+                        text=_html_to_text(markup),
+                    )
+                )
+        return documents
 
     async def scrape_disclosures(
         self,
@@ -218,14 +379,21 @@ class DartScraper(BaseScraper):
             except (ValueError, TypeError):
                 published_at = datetime.now(tz=KST)
 
+            # report_nm 뒤에 공백이 줄줄이 붙어 오는 경우가 있다.
+            report_nm = str(item.get("report_nm") or "").strip()
             disclosures.append(
                 self._make_disclosure(
-                    title=item.get("report_nm", ""),
+                    title=report_nm,
                     url=url,
                     company=item.get("corp_name", ""),
                     ticker=item.get("stock_code", ""),
-                    disclosure_type=item.get("report_nm", ""),
+                    disclosure_type=report_nm,
                     published_at=published_at,
+                    rcept_no=rcept_no,
+                    corp_code=item.get("corp_code") or "",
+                    corp_cls=item.get("corp_cls") or "",
+                    rm=item.get("rm") or "",
+                    is_correction=is_correction(report_nm),
                 )
             )
 

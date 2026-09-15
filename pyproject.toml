@@ -1,6 +1,6 @@
 [project]
 name = "krx-news-client"
-version = "0.3.1"
+version = "0.4.0"
 description = "한국 주식시장 뉴스·공시 수집 클라이언트 라이브러리 (토스/DART)"
 readme = "README.md"
 license = { text = "Apache-2.0" }
