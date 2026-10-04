@@ -38,6 +38,16 @@ NEWS_DETAIL_URL = f"{API_BASE}/api/v2/news/{{news_id}}"
 #:   범위가 하루쯤 겹친다. 그래서 ``since`` 는 **페이지 전체**가 그보다 오래됐을
 #:   때만 멈추는 조건으로 쓴다.
 COMPANY_NEWS_URL = f"{API_BASE}/api/v2/news/companies/{{code}}"
+#: 종목별 뉴스 페이징 한계(2026-10-05 실측, 005930·000660).
+#: - ``size`` 는 1~100. **101 이상이면 토스가 오류 없이 빈 body 를 준다**(조용한
+#:   0건이라 라이브러리가 ``ValueError`` 로 막는다). 0 은 400.
+#: - ``number * size`` 가 10,000 을 넘으면 400 ``bad-request.pagination-limit``
+#:   (size=100 이면 101페이지, size=50 이면 201페이지). 한계는 페이지 수가 아니라
+#:   **오프셋**이라 size 를 줄여도 더 과거로는 못 간다. 대형주는 10,000건이
+#:   6개월도 안 된다(daytrade-it 백필 2026-09-16).
+MAX_COMPANY_NEWS_PAGE_SIZE = 100
+MAX_COMPANY_NEWS_OFFSET = 10_000
+PAGINATION_LIMIT_CODE = "bad-request.pagination-limit"
 
 # dashboard feed type -> NewsCategory
 FEED_TYPES: dict[str, NewsCategory] = {
@@ -88,6 +98,16 @@ def normalize_stock_code(code: str) -> str:
     if len(code) == 7 and code.startswith("A"):
         return code[1:]
     return code
+
+
+def _is_pagination_limit(response: httpx.Response) -> bool:
+    """400 응답이 토스의 오프셋 한계(``bad-request.pagination-limit``)인가."""
+    if response.status_code != 400:
+        return False
+    try:
+        return (response.json().get("error") or {}).get("code") == PAGINATION_LIMIT_CODE
+    except (ValueError, AttributeError):
+        return False
 
 
 def extract_body_text(blocks: list[dict[str, Any]] | None) -> str:
@@ -163,16 +183,21 @@ class TossScraper(BaseScraper):
             nation=item.get("nation") or "",
         )
 
-    async def fetch_article_detail(self, news_id_or_url: str) -> NewsArticle | None:
-        """기사 하나의 전체 본문. 없는 기사면 None.
+    async def fetch_article_detail_raw(self, news_id_or_url: str) -> dict[str, Any] | None:
+        """기사 상세 응답의 ``result.kr`` dict 그대로. 없는 기사면 None.
+
+        ``NewsArticle`` 이 버리는 것(본문 블록의 ``type``·이미지, ``source.code``,
+        ``ticsTitles`` 등)이 필요한 호출부용 raw 경로 -- ``company_news_page`` 와
+        같은 성격이다(daytrade-it 이 원본 payload 를 아카이브하려고 같은 요청을
+        따로 짜고 있던 것을 여기로 옮겼다). ``fetch_article_detail`` 은 이 위에서
+        파싱만 한다.
 
         Args:
             news_id_or_url: 토스 newsId(``NewsArticle.news_id``) 또는 토스 기사 URL
                 (``NewsArticle.url``).
 
-        반환 ``NewsArticle`` 은 ``content`` 에 본문 전체, ``summary`` 에 토스 요약
-        문장, ``sentiment``·``original_url`` 까지 채운다. ``category`` 는 상세에
-        정보가 없어 ``MARKET`` 이다.
+        없는 ID 는 200 ``{"result": null}``, 형식이 틀린 ID 는 400 -- 둘 다 None.
+        그 외 HTTP 오류는 그대로 올린다.
         """
         news_id = news_id_from_url(news_id_or_url) if "://" in news_id_or_url else news_id_or_url
         if not news_id:
@@ -183,8 +208,27 @@ class TossScraper(BaseScraper):
             if e.response.status_code in (400, 404):
                 return None
             raise
-        detail = ((resp.json() or {}).get("result") or {}).get("kr")
-        if not detail or not detail.get("title"):
+        payload = resp.json()
+        result = payload.get("result") if isinstance(payload, dict) else None
+        detail = result.get("kr") if isinstance(result, dict) else None
+        return detail if isinstance(detail, dict) and detail else None
+
+    async def fetch_article_detail(self, news_id_or_url: str) -> NewsArticle | None:
+        """기사 하나의 전체 본문. 없는 기사면 None.
+
+        Args:
+            news_id_or_url: 토스 newsId(``NewsArticle.news_id``) 또는 토스 기사 URL
+                (``NewsArticle.url``).
+
+        반환 ``NewsArticle`` 은 ``content`` 에 본문 전체, ``summary`` 에 토스 요약
+        문장, ``sentiment``·``original_url`` 까지 채운다. ``category`` 는 상세에
+        정보가 없어 ``MARKET`` 이다. 원본 dict 가 필요하면 ``fetch_article_detail_raw``.
+        """
+        # URL(→ ``NewsArticle.id`` 해시)은 요청한 ID 로 만든다 -- 응답의 ``id`` 가
+        # 형식이 달라도 소비자의 dedup 키가 흔들리지 않게.
+        news_id = news_id_from_url(news_id_or_url) if "://" in news_id_or_url else news_id_or_url
+        detail = await self.fetch_article_detail_raw(news_id_or_url)
+        if not news_id or not detail or not detail.get("title"):
             return None
 
         source = detail.get("source") or {}
@@ -214,12 +258,14 @@ class TossScraper(BaseScraper):
         (``COMPANY_NEWS_URL`` 주석).
 
         Raises:
-            ValueError: 코드가 6자리 형식이 아니거나 ``number < 1``(토스는 400).
+            ValueError: 코드가 6자리 형식이 아니거나, ``number < 1``(토스는 400),
+                ``size`` 가 1~100 밖(101 이상은 토스가 **조용히 빈 body**),
+                ``number * size > 10_000``(토스는 400 ``pagination-limit``).
+                마지막 둘은 요청을 보내기 전에 막는다.
             TossResponseError: 응답에 ``result.body`` 리스트가 없다.
         """
         stock_code = self._validate_code(code)
-        if number < 1:
-            raise ValueError(f"number starts at 1 (got {number})")
+        self._validate_page(number, size)
         resp = await self.fetch(
             COMPANY_NEWS_URL.format(code=stock_code),
             params={"number": number, "size": size},
@@ -247,19 +293,42 @@ class TossScraper(BaseScraper):
             since: 이 시각 이후 기사만. ``date`` 면 그날 00:00 KST, naive
                 ``datetime`` 이면 KST 로 본다. 한 페이지가 통째로 이보다 오래됐으면
                 더 넘기지 않는다(``COMPANY_NEWS_URL`` 주석 참고).
-            max_pages: 최대 페이지 수(페이지당 ``page_size`` 건).
-            page_size: 페이지 크기. 100 까지 동작 확인.
+            max_pages: 최대 페이지 수(페이지당 ``page_size`` 건). 토스의 오프셋
+                한계(``number * page_size <= 10_000``)를 넘는 페이지는 부르지
+                않고 경고 로그만 남긴다 -- 그 너머는 토스가 400 을 준다.
+            page_size: 페이지 크기, 1~100. 101 이상은 토스가 오류 없이 빈 결과를
+                주므로 ``ValueError``.
 
         종목 페이지에는 시장 전체 기사(예: "코스피 마감")도 섞인다 -- 이런 기사는
         ``tickers`` 가 비어 있다. 요청 간격은 ``BaseScraper`` 의 0.5~1.5초 무작위
         지연을 그대로 쓴다(``min_delay``/``max_delay`` 로 조절).
         """
-        self._validate_code(code)
+        stock_code = self._validate_code(code)
+        self._validate_page(1, page_size)
         since_at = self._since_to_datetime(since)
 
+        last_allowed_page = MAX_COMPANY_NEWS_OFFSET // page_size
         by_id: dict[str, NewsArticle] = {}
         for page in range(1, max_pages + 1):
-            body, _last_page = await self.company_news_page(code, page, page_size)
+            if page > last_allowed_page:
+                logger.warning(
+                    "Toss company news %s: hit pagination cap (%d pages x %d) -- "
+                    "older articles are unreachable via this endpoint",
+                    stock_code, last_allowed_page, page_size,
+                )
+                break
+            try:
+                body, _last_page = await self.company_news_page(stock_code, page, page_size)
+            except httpx.HTTPStatusError as e:
+                # 토스가 한계를 낮춰도 모은 것까지는 돌려준다. 1페이지부터 400 이면
+                # 한계가 아니라 다른 문제라 그대로 올린다.
+                if page > 1 and _is_pagination_limit(e.response):
+                    logger.warning(
+                        "Toss company news %s: server pagination limit at page %d",
+                        stock_code, page,
+                    )
+                    break
+                raise
             if not body:
                 break
             parsed = [
@@ -283,6 +352,21 @@ class TossScraper(BaseScraper):
                 f"Toss company news needs a 6-char KRX code like 005930 (got {code!r})"
             )
         return stock_code
+
+    @staticmethod
+    def _validate_page(number: int, size: int) -> None:
+        if number < 1:
+            raise ValueError(f"number starts at 1 (got {number})")
+        if not 1 <= size <= MAX_COMPANY_NEWS_PAGE_SIZE:
+            raise ValueError(
+                f"size must be 1..{MAX_COMPANY_NEWS_PAGE_SIZE} (got {size}); "
+                "Toss silently returns an empty page above 100"
+            )
+        if number * size > MAX_COMPANY_NEWS_OFFSET:
+            raise ValueError(
+                f"number * size must be <= {MAX_COMPANY_NEWS_OFFSET} (got {number} x {size}); "
+                "Toss answers 400 pagination-limit beyond that offset"
+            )
 
     @staticmethod
     def _since_to_datetime(since: date | datetime | None) -> datetime | None:
