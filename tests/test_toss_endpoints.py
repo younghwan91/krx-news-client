@@ -345,3 +345,118 @@ class TestCompanyNews:
             scraper.min_delay = scraper.max_delay = 0
             with pytest.raises(httpx.HTTPStatusError):
                 await scraper.scrape_company_news("005930")
+
+
+class TestArticleDetailRaw:
+    async def test_returns_kr_payload_as_is(self, httpx_mock):
+        httpx_mock.add_response(json=DETAIL_PAYLOAD)
+        async with TossScraper() as scraper:
+            scraper.min_delay = scraper.max_delay = 0
+            detail = await scraper.fetch_article_detail_raw("moneytoday_2026091515295351946")
+        # 파싱된 NewsArticle 이 버리는 블록 구조(type/image)·source.code 가 그대로 남아야 한다.
+        assert detail == DETAIL_PAYLOAD["result"]["kr"]
+        assert detail["content"][1] == {"type": "image", "content": "https://img/1.jpg"}
+
+    async def test_accepts_article_url(self, httpx_mock):
+        httpx_mock.add_response(json=DETAIL_PAYLOAD)
+        async with TossScraper() as scraper:
+            scraper.min_delay = scraper.max_delay = 0
+            detail = await scraper.fetch_article_detail_raw(
+                build_article_url("moneytoday_2026091515295351946")
+            )
+        assert detail["id"] == "moneytoday_2026091515295351946"
+
+    async def test_missing_article_returns_none(self, httpx_mock):
+        httpx_mock.add_response(json={"result": None})
+        async with TossScraper() as scraper:
+            scraper.min_delay = scraper.max_delay = 0
+            assert await scraper.fetch_article_detail_raw("moneytoday_0000") is None
+
+    async def test_malformed_id_returns_none(self, httpx_mock):
+        httpx_mock.add_response(status_code=400)
+        async with TossScraper() as scraper:
+            scraper.min_delay = scraper.max_delay = 0
+            assert await scraper.fetch_article_detail_raw("nope") is None
+
+    async def test_server_error_propagates(self, httpx_mock):
+        httpx_mock.add_response(status_code=500, is_reusable=True)
+        async with TossScraper() as scraper:
+            scraper.min_delay = scraper.max_delay = 0
+            scraper.max_retries = 1
+            with pytest.raises(httpx.HTTPStatusError):
+                await scraper.fetch_article_detail_raw("moneytoday_0000")
+
+
+class TestCompanyNewsPaginationLimits:
+    """토스 종목별 뉴스의 페이징 한계(2026-10-05 실측).
+
+    - ``size`` 는 1~100. 101 이상이면 토스가 **오류 없이 빈 body** 를 준다
+      (조용한 0건), 0 이면 400.
+    - ``number * size`` 가 10,000 을 넘으면 400 ``bad-request.pagination-limit``
+      (size=100 이면 101페이지, size=50 이면 201페이지).
+    """
+
+    @pytest.mark.parametrize("size", [0, 101, 1000])
+    async def test_rejects_page_size_toss_answers_empty_or_400(self, size):
+        async with TossScraper() as scraper:
+            with pytest.raises(ValueError):
+                await scraper.company_news_page("005930", number=1, size=size)
+
+    @pytest.mark.parametrize(("number", "size"), [(101, 100), (201, 50), (10_001, 1)])
+    async def test_rejects_page_beyond_offset_cap_without_request(self, httpx_mock, number, size):
+        async with TossScraper() as scraper:
+            with pytest.raises(ValueError):
+                await scraper.company_news_page("005930", number=number, size=size)
+        assert httpx_mock.get_requests() == []
+
+    async def test_last_page_within_cap_is_allowed(self, httpx_mock):
+        httpx_mock.add_response(json=_company_page([], last_page=True))
+        async with TossScraper() as scraper:
+            scraper.min_delay = scraper.max_delay = 0
+            await scraper.company_news_page("005930", number=100, size=100)
+        assert len(httpx_mock.get_requests()) == 1
+
+    async def test_scrape_rejects_bad_page_size(self):
+        async with TossScraper() as scraper:
+            with pytest.raises(ValueError):
+                await scraper.scrape_company_news("005930", page_size=101)
+
+    async def test_scrape_stops_at_offset_cap_instead_of_400(self, httpx_mock, caplog):
+        # size=50 → 200페이지가 한계. max_pages=250 을 줘도 200에서 멈추고 201 은 부르지 않는다.
+        httpx_mock.add_response(
+            json=_company_page([_company_item("a", "2026-09-15T10:00:00")], last_page=False),
+            is_reusable=True,
+        )
+        async with TossScraper() as scraper:
+            scraper.min_delay = scraper.max_delay = 0
+            with caplog.at_level("WARNING", logger="krx_news_client.scrapers.toss"):
+                articles = await scraper.scrape_company_news(
+                    "005930", max_pages=250, page_size=50
+                )
+        assert len(httpx_mock.get_requests()) == 200
+        assert [a.news_id for a in articles] == ["a"]
+        assert "pagination cap" in caplog.text
+
+    async def test_scrape_treats_server_pagination_limit_as_end(self, httpx_mock):
+        # 토스가 한계를 낮추더라도(예: 2페이지부터 400) 모은 것까지 돌려준다.
+        httpx_mock.add_response(
+            json=_company_page([_company_item("a", "2026-09-15T10:00:00")], last_page=False)
+        )
+        httpx_mock.add_response(
+            status_code=400,
+            json={"error": {"statusCode": 400, "code": "bad-request.pagination-limit"}},
+        )
+        async with TossScraper() as scraper:
+            scraper.min_delay = scraper.max_delay = 0
+            articles = await scraper.scrape_company_news("005930", max_pages=5)
+        assert [a.news_id for a in articles] == ["a"]
+        assert len(httpx_mock.get_requests()) == 2
+
+    async def test_scrape_still_raises_other_400(self, httpx_mock):
+        httpx_mock.add_response(
+            status_code=400, json={"error": {"code": "methodInvocation.pagingParam.size"}}
+        )
+        async with TossScraper() as scraper:
+            scraper.min_delay = scraper.max_delay = 0
+            with pytest.raises(httpx.HTTPStatusError):
+                await scraper.scrape_company_news("005930")

@@ -48,6 +48,7 @@ from krx_news_client import TossScraper
 
 async with TossScraper() as scraper:
     detail = await scraper.fetch_article_detail(articles[0].url)  # 본문 전체·감성 라벨·언론사 원문 URL
+    raw = await scraper.fetch_article_detail_raw(articles[0].url)  # 같은 것을 원본 dict 로(본문 블록 구조 유지)
     history = await scraper.scrape_company_news(                  # 종목별 뉴스, 과거로 페이징
         "005930", since=date(2025, 6, 1), max_pages=20     # date 는 그날 00:00 KST
     )
@@ -106,10 +107,12 @@ while True:
 
 ### 토스 사용 시 주의
 
-토스는 **비공식 내부 API**라 예고 없이 막히거나 형식이 바뀔 수 있다. 형식이 바뀌면 종목별 뉴스 경로는 빈 결과 대신 `TossResponseError`를 올린다. 종목별 뉴스(`/api/v2/news/companies/{code}`)에서 직접 확인한 함정은 다음과 같다(2026-09-15).
+토스는 **비공식 내부 API**라 예고 없이 막히거나 형식이 바뀔 수 있다. 형식이 바뀌면 종목별 뉴스 경로는 빈 결과 대신 `TossResponseError`를 올린다. 종목별 뉴스(`/api/v2/news/companies/{code}`)에서 직접 확인한 함정은 다음과 같다(2026-09-15, 2026-10-05).
 
 - **코드는 6자리만** 받는다. `A005930`이나 ISIN을 넣으면 토스는 오류 없이 0건을 준다. 그래서 라이브러리가 `A` 접두어는 벗기고, 그 외 형식이면 `ValueError`를 낸다.
 - **페이지 번호는 1부터** 시작한다. `number=0`이면 토스가 400을 주므로 호출 전에 `ValueError`를 낸다.
+- **페이지 크기는 100까지.** `size=101` 이상이면 토스가 오류 없이 빈 페이지를 준다. 그래서 `ValueError`를 낸다.
+- **오프셋 한계가 10,000건이다.** `number × size`가 이를 넘으면 토스가 400(`pagination-limit`)을 준다. 페이지 수가 아니라 오프셋 기준이라 `size`를 줄여도 더 과거로는 못 간다. `scrape_company_news`는 그 직전에서 경고 로그를 남기고 멈추고, `company_news_page`는 요청 전에 `ValueError`를 낸다. 대형주는 10,000건이 6개월에 못 미친다.
 - **`lastPage`를 믿을 수 없다.** 페이지가 `size`보다 몇 건만 모자라도 뒤에 페이지가 남아 있는데 `True`가 온다. 그래서 `scrape_company_news`는 빈 페이지가 나올 때까지 넘긴다.
 - **순서가 대략적이다.** 페이지 안에서도 정렬돼 있지 않고, 이웃 페이지끼리 시각이 하루쯤 겹친다. 그래서 `since`는 페이지 전체가 그보다 오래됐을 때만 멈추는 조건으로 쓰고, 결과는 id로 중복을 걷어낸 뒤 최신순으로 정렬해 돌려준다.
 - **시장 전체 기사가 섞인다.** "코스피 마감" 같은 기사는 `stockCodes`가 없으므로 `tickers`가 비어 있다.
