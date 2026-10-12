@@ -20,6 +20,8 @@ uv run --extra dev ruff check src tests    # CI 는 핀 없는 최신 ruff
   — 9시간 밀림 버그(86cc785) 전례.
 - 토스는 비공식 내부 API 다. 동작을 바꾸기 전에 실제 요청으로 확인하고, 확인한 날짜와 결과를 README "토스 사용 시 주의"·CHANGELOG 에 남긴다.
   조용한 0건보다 `ValueError`/`TossResponseError` 가 낫다는 게 지금까지의 방침이다.
+- **뉴스·공시 전용이다.** 토스 WTS 의 수급·호가·AI 시그널·실시간 순위는 넣지 않는다(2026-09-07) — 수급·호가는 kiwoom-client
+  공식 API 에 있고, AI 시그널·순위는 point-in-time 재현이 안 된다. 꼭 필요하면 kiwoom-client 나 별도 레포로.
 - DART: `search_disclosures*` 는 엄격(오류를 올림, 백필용), `scrape_disclosures` 는 관용(로그 후 계속, 폴링용). 이 구분을 섞지 않는다.
 
 ## 소비자와 릴리스
