@@ -256,6 +256,30 @@ class TestKeyNeverLogged:
         installed = [f for f in httpx_logger.filters if isinstance(f, SecretMaskingFilter)]
         assert len(installed) == 1
 
+    @pytest.mark.parametrize(
+        "name", ["httpcore.connection", "httpcore.http11", "httpcore.http2", "httpcore.proxy"]
+    )
+    def test_httpcore_child_logger_masks_key(self, name, caplog):
+        # 로거 필터는 그 로거에서 만든 레코드에만 걸린다 -- 부모 "httpcore" 에 건 필터는
+        # httpcore 가 실제로 쓰는 하위 로거의 레코드를 지나친다.
+        DartScraper(api_key="a")
+        caplog.set_level(logging.DEBUG, logger=name)
+        logging.getLogger(name).debug("trace url=%s", f"https://x/list.json?crtfc_key={SECRET}")
+        assert SECRET not in caplog.text
+        assert "crtfc_key=***" in caplog.text
+
+    def test_every_existing_httpcore_logger_is_masked(self):
+        import httpcore  # noqa: F401 - 하위 로거를 만들게 한다
+
+        DartScraper(api_key="a")
+        children = [
+            n for n in logging.root.manager.loggerDict if n.startswith("httpcore.")
+        ]
+        assert children, "httpcore 하위 로거가 없다 -- 테스트 전제가 깨졌다"
+        for n in children:
+            logger = logging.getLogger(n)
+            assert any(isinstance(f, SecretMaskingFilter) for f in logger.filters), n
+
     def test_mask_secrets(self):
         assert mask_secrets(f"https://x/list.json?crtfc_key={SECRET}&bgn_de=1") == (
             "https://x/list.json?crtfc_key=***&bgn_de=1"

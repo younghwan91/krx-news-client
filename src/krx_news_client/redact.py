@@ -24,6 +24,14 @@ _MASK = r"\1***"
 MASKED_LOGGERS: tuple[str, ...] = (
     "httpx",
     "httpcore",
+    # httpcore 는 아래 하위 로거로만 찍는다. http2·socks 처럼 늦게 import 되는 모듈의
+    # 로거는 등록 시점에 아직 없으므로 이름으로 미리 만들어 둔다 -- 나중에 httpcore 가
+    # 같은 이름으로 getLogger 하면 필터가 걸린 같은 객체를 받는다.
+    "httpcore.connection",
+    "httpcore.http11",
+    "httpcore.http2",
+    "httpcore.proxy",
+    "httpcore.socks",
     "krx_news_client.scrapers.base",
     "krx_news_client.scrapers.dart",
 )
@@ -79,9 +87,26 @@ class SecretMaskingFilter(logging.Filter):
         return True
 
 
+def _with_children(names: Iterable[str]) -> list[str]:
+    """이름과, 지금 존재하는 그 하위 로거(``name.*``)를 모두 돌려준다.
+
+    로거 필터는 그 로거에서 만든 레코드에만 걸리고 하위 로거 레코드는 지나친다.
+    httpcore 는 ``httpcore.http11``·``httpcore.connection`` 같은 하위 로거로만 찍으므로
+    부모에 거는 것으로는 막히지 않는다. 이름을 박아 두면 버전이 바뀔 때 다시 새므로,
+    등록 시점에 있는 하위 로거를 찾아 건다(httpx 를 import 하면 httpcore 모듈이 함께 올라와
+    ``DartScraper`` 생성 시점에는 하위 로거가 이미 있다).
+    """
+    existing = list(logging.root.manager.loggerDict)
+    out: list[str] = []
+    for name in names:
+        out.append(name)
+        out.extend(n for n in existing if n.startswith(name + "."))
+    return out
+
+
 def install_log_masking(logger_names: Iterable[str] = MASKED_LOGGERS) -> None:
-    """로거마다 ``SecretMaskingFilter`` 를 한 번만 건다(여러 번 불러도 중복되지 않는다)."""
-    for name in logger_names:
+    """로거와 그 하위 로거마다 ``SecretMaskingFilter`` 를 한 번만 건다(중복되지 않는다)."""
+    for name in _with_children(logger_names):
         target = logging.getLogger(name)
         if not any(isinstance(f, SecretMaskingFilter) for f in target.filters):
             target.addFilter(SecretMaskingFilter())
