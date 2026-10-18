@@ -26,10 +26,8 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "docs" / "images" / "hero-data.json"
 
 #: 그림에 보일 종목 (위→아래 순서). 이름은 영어로 — 그림 안 글자는 영어.
+#: 초대형주(삼성전자·SK하이닉스·현대차)는 3일에 350건이 넘어 점이 뭉개진다 — 그림에는 넣지 않는다.
 TICKERS = [
-    ("005930", "Samsung Electronics"),
-    ("000660", "SK hynix"),
-    ("005380", "Hyundai Motor"),
     ("035420", "NAVER"),
     ("068270", "Celltrion"),
     ("051910", "LG Chem"),
@@ -137,7 +135,10 @@ def _card(fig, p, x0, y0, w, h, color, head, fields):
 def draw_factory(data: dict):
     start = date.fromisoformat(data["window"]["start"])
     end = date.fromisoformat(data["window"]["end"])
-    tickers = data["tickers"]
+    # JSON 에 더 많은 종목이 저장돼 있어도 TICKERS 순서·범위대로만 그린다.
+    shown = [c for c, _ in TICKERS]
+    tickers = sorted((t for t in data["tickers"] if t["code"] in shown),
+                     key=lambda t: shown.index(t["code"]))
     rows = {t["code"]: i for i, t in enumerate(tickers)}
     items = [it for it in data["items"] if it["ticker"] in rows
              and start <= datetime.fromisoformat(it["published_at"]).astimezone(KST).date() <= end]
