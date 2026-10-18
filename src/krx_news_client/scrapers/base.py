@@ -17,6 +17,7 @@ from krx_news_client.models.schemas import (
     NewsCategory,
     NewsSource,
 )
+from krx_news_client.redact import scrub_exception
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,9 @@ class BaseScraper(ABC):
                 resp.raise_for_status()
                 return resp
             except httpx.HTTPStatusError as e:
+                # 메시지(``for url '…'``)에 쿼리의 DART 키가 실린다. 올리기 전에 가린다 --
+                # 호출부(소비자 포함)가 str(e) 를 로그에 적어도 키가 남지 않게.
+                scrub_exception(e)
                 status = e.response.status_code
                 if not _is_retryable_status(status) or attempt == self.max_retries:
                     raise
@@ -134,6 +138,7 @@ class BaseScraper(ABC):
                 )
                 await asyncio.sleep(wait)
             except httpx.RequestError as e:
+                scrub_exception(e)
                 if attempt == self.max_retries:
                     raise
                 logger.warning(

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import io
+import logging
 import zipfile
+from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 
 from krx_news_client import (
@@ -10,7 +13,9 @@ from krx_news_client import (
     DartQuotaExceededError,
     DartScraper,
     Deduplicator,
+    SecretMaskingFilter,
     is_correction,
+    mask_secrets,
     quarter_ranges,
 )
 
@@ -189,3 +194,73 @@ class TestDeduplicator:
             second = await scraper.scrape_disclosures(bgn_de="20260915", end_de="20260915")
         assert len(dedup.filter_new(first)) == 1
         assert dedup.filter_new(second) == []
+
+
+SECRET = "SECRETDARTKEY0123456789abcdef"
+
+
+class TestKeyNeverLogged:
+    """DART 키는 쿼리(``crtfc_key``)로만 보낼 수 있다 -- 그래서 URL 이 찍히는 곳마다 가려야 한다.
+
+    2026-10-18 ``scripts/make_hero.py`` 첫 실행에서 httpx 의 ``HTTP Request: GET …?crtfc_key=…``
+    INFO 로그로 키가 터미널에 그대로 노출됐다. 사용자가 ``logging.basicConfig(level=INFO)``
+    만 켜도 같은 일이 난다.
+    """
+
+    async def test_httpx_request_log_masks_key(self, httpx_mock, caplog):
+        caplog.set_level(logging.INFO, logger="httpx")
+        httpx_mock.add_response(json=_ok([]))
+        async with DartScraper(api_key=SECRET) as scraper:
+            await scraper.search_disclosures(bgn_de="20260915", end_de="20260915")
+        assert SECRET not in caplog.text
+        # 로그 자체는 남아야 한다(레벨을 낮춰 숨기는 식의 우회가 아니다).
+        assert "HTTP Request:" in caplog.text
+        assert "crtfc_key=***" in caplog.text
+
+    async def test_http_status_error_message_masks_key(self, httpx_mock):
+        httpx_mock.add_response(status_code=404)
+        async with DartScraper(api_key=SECRET) as scraper:
+            with pytest.raises(httpx.HTTPStatusError) as excinfo:
+                await scraper.search_disclosures(bgn_de="20260915", end_de="20260915")
+        assert SECRET not in str(excinfo.value)
+        assert SECRET not in repr(excinfo.value)
+        assert "crtfc_key=***" in str(excinfo.value)
+        # 호출부가 쓰는 속성은 그대로여야 한다.
+        assert excinfo.value.response.status_code == 404
+
+    async def test_lenient_scrape_exception_log_masks_key(self, httpx_mock, caplog):
+        caplog.set_level(logging.DEBUG)
+        httpx_mock.add_response(status_code=404)
+        async with DartScraper(api_key=SECRET) as scraper:
+            assert await scraper.scrape_disclosures(bgn_de="20260915", end_de="20260915") == []
+        # logger.exception 의 트레이스백(exc_info)까지 포함해 어디에도 없어야 한다.
+        assert SECRET not in caplog.text
+        assert "DART API request failed" in caplog.text
+
+    async def test_request_error_retry_log_masks_key(self, httpx_mock, caplog):
+        caplog.set_level(logging.DEBUG)
+        url = f"https://opendart.fss.or.kr/api/list.json?crtfc_key={SECRET}&x=1"
+        httpx_mock.add_exception(httpx.ConnectError(f"boom {url}"))
+        httpx_mock.add_response(json=_ok([]))
+        async with DartScraper(api_key=SECRET) as scraper:
+            scraper.max_retries = 2
+            with patch("asyncio.sleep", new=AsyncMock()):
+                await scraper.search_disclosures(bgn_de="20260915", end_de="20260915")
+        assert SECRET not in caplog.text
+        assert "retry 1/2" in caplog.text
+
+    def test_filter_installed_once(self):
+        DartScraper(api_key="a")
+        DartScraper(api_key="b")
+        httpx_logger = logging.getLogger("httpx")
+        installed = [f for f in httpx_logger.filters if isinstance(f, SecretMaskingFilter)]
+        assert len(installed) == 1
+
+    def test_mask_secrets(self):
+        assert mask_secrets(f"https://x/list.json?crtfc_key={SECRET}&bgn_de=1") == (
+            "https://x/list.json?crtfc_key=***&bgn_de=1"
+        )
+        assert mask_secrets(f"url 'https://x/document.xml?crtfc_key={SECRET}'") == (
+            "url 'https://x/document.xml?crtfc_key=***'"
+        )
+        assert mask_secrets("no key here") == "no key here"

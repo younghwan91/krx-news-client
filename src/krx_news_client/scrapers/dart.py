@@ -20,6 +20,7 @@ from krx_news_client.models.schemas import (
     NewsSource,
     is_correction,
 )
+from krx_news_client.redact import install_log_masking
 from krx_news_client.scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
@@ -124,6 +125,10 @@ class DartScraper(BaseScraper):
             10년치 공시 수집에 키 3개를 로테이션하던 로직을 여기로 옮겼다.
         """
         super().__init__()
+        # 키는 URL 쿼리로만 보낼 수 있어 httpx 의 ``HTTP Request:`` INFO 로그에 그대로
+        # 실린다. 사용자 로그 레벨은 건드리지 않고, 레코드에서 값만 ``***`` 로 가린다.
+        # (import 시가 아니라 여기서 -- 라이브러리를 import 만 한 코드의 로깅을 바꾸지 않는다.)
+        install_log_masking()
         keys = [api_key] if isinstance(api_key, str) else [str(k) for k in api_key]
         self.api_keys: list[str] = [k for k in keys if k]
         #: 단일 키만 쓰던 기존 호출부와의 하위호환(``self.api_key`` 참조).

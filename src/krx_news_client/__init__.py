@@ -10,6 +10,7 @@ from krx_news_client.models.schemas import (
     NewsSource,
     is_correction,
 )
+from krx_news_client.redact import SecretMaskingFilter, mask_secrets
 from krx_news_client.scrapers.base import BaseScraper
 from krx_news_client.scrapers.dart import (
     DartAPIError,
@@ -36,9 +37,11 @@ __all__ = [
     "NewsArticle",
     "NewsCategory",
     "NewsSource",
+    "SecretMaskingFilter",
     "TossResponseError",
     "TossScraper",
     "is_correction",
+    "mask_secrets",
     "news_id_from_url",
     "normalize_stock_code",
     "quarter_ranges",

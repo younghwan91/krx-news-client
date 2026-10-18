@@ -90,6 +90,8 @@ rows = await scraper.search_disclosures_range(bgn_de="20160901", end_de="2026091
 docs = await scraper.fetch_document(rows[0]["rcept_no"])  # 공시 원문(document.xml) → docs[0].text
 ```
 
+키는 로그에 남지 않는다 — `DartScraper`를 만들면 `httpx` 로거와 올리는 예외 메시지에서 `crtfc_key=…`가 `***`로 가려진다(로그 레벨은 그대로). 요청 URL을 직접 로그에 쓰는 코드는 `mask_secrets()`를 거치면 된다.
+
 ### 폴링
 
 ```python
