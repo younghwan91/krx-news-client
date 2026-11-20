@@ -22,6 +22,9 @@
 pip install krx-news-client   # Python 3.11 이상
 ```
 
+> `fetch_article_detail_raw`·종목별 뉴스의 10,000건 오프셋 한계 처리·`size` 검증·DART 키 로그 마스킹은 PyPI 최신(0.4.0) 뒤에 들어와 아직 main 에만 있다.
+> 쓰려면 `pip install "krx-news-client @ git+https://github.com/younghwan91/krx-news-client"` 로 받는다.
+
 ```python
 import asyncio
 from krx_news_client import TossScraper
