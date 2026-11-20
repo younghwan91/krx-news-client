@@ -5,16 +5,7 @@
 
 ## [Unreleased]
 
-### Security
-
-- **로그에 DART API 키가 찍히던 것을 막았다.** 키는 URL 쿼리(`crtfc_key`)로만 보낼 수 있어
-  httpx 의 `HTTP Request: GET …` INFO 로그, `HTTPStatusError` 메시지(`for url '…'`),
-  재시도 경고와 `scrape_disclosures` 의 예외 로그에 그대로 남았다(`logging.basicConfig(level=INFO)`
-  만 켜도 터미널·CI 출력에 노출). 이제 `DartScraper` 를 만들 때 `httpx`·`httpcore`·라이브러리
-  로거에 마스킹 필터를 한 번 걸고, 올리는 httpx 예외의 메시지에서도 값을 `crtfc_key=***` 로
-  바꾼다. 로그 레벨은 건드리지 않는다. 직접 URL 을 로그에 쓰는 호출부는 `mask_secrets()` 를 쓸 것.
-
-## [0.5.0] - 2026-10-05
+## [0.5.0] - 2026-11-21
 
 ### Added
 
@@ -35,6 +26,15 @@
   다른 문제라 그대로 올린다). `company_news_page`는 요청을 보내기 전에 `ValueError`.
 - **`page_size > 100`이면 토스가 오류 없이 빈 페이지를 줘서 조용한 0건이 됐다.**
   `size`를 1~100으로 검사해 `ValueError`를 낸다.
+
+### Security
+
+- **로그에 DART API 키가 찍히던 것을 막았다.** 키는 URL 쿼리(`crtfc_key`)로만 보낼 수 있어
+  httpx 의 `HTTP Request: GET …` INFO 로그, `HTTPStatusError` 메시지(`for url '…'`),
+  재시도 경고와 `scrape_disclosures` 의 예외 로그에 그대로 남았다(`logging.basicConfig(level=INFO)`
+  만 켜도 터미널·CI 출력에 노출). 이제 `DartScraper` 를 만들 때 `httpx`·`httpcore`·라이브러리
+  로거에 마스킹 필터를 한 번 걸고, 올리는 httpx 예외의 메시지에서도 값을 `crtfc_key=***` 로
+  바꾼다. 로그 레벨은 건드리지 않는다. 직접 URL 을 로그에 쓰는 호출부는 `mask_secrets()` 를 쓸 것.
 
 ## [0.4.0] - 2026-09-15
 
