@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" width="1200" height="280" fill="none">
+  <defs>
+    <linearGradient id="knc-banner-bg-l" x1="0" y1="0" x2="1200" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="65%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#ECFEFF"/>
+    </linearGradient>
+    <radialGradient id="knc-glow-l" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(975 140) rotate(90) scale(160 240)">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="knc-mark-bg-l" x1="56" y1="48" x2="120" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0369A1"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <pattern id="knc-dots-l" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#CBD5E1" fill-opacity="0.55"/>
+    </pattern>
+  </defs>
+
+  <!-- Card Container -->
+  <rect x="1" y="1" width="1198" height="278" rx="20" fill="url(#knc-banner-bg-l)" stroke="#E2E8F0" stroke-width="1.5"/>
+  <rect x="740" y="16" width="444" height="248" rx="14" fill="url(#knc-dots-l)" opacity="0.7"/>
+  <rect x="720" y="2" width="478" height="276" rx="18" fill="url(#knc-glow-l)"/>
+
+  <!-- Left: Brand Mark (64x64) -->
+  <rect x="56" y="48" width="64" height="64" rx="14" fill="url(#knc-mark-bg-l)"/>
+  <rect x="57" y="49" width="62" height="62" rx="13" stroke="#67E8F9" stroke-opacity="0.35" stroke-width="1.5"/>
+  <rect x="70" y="63" width="36" height="34" rx="6" fill="#FFFFFF" fill-opacity="0.16" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="1.6"/>
+  <rect x="76" y="69" width="16" height="3.2" rx="1.6" fill="#FFFFFF"/>
+  <rect x="76" y="75.5" width="24" height="2.4" rx="1.2" fill="#BAE6FD"/>
+  <path d="M74 87H80.5L83.5 81.5L87.5 91.5L91 84.5L94 87H102" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="100" cy="70.5" r="3" fill="#34D399"/>
+
+  <!-- Left: Title & Tagline & Tech Pills -->
+  <text x="138" y="88" fill="#0F172A" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="38" font-weight="800" letter-spacing="-0.025em">krx-news-client</text>
+  <text x="139" y="110" fill="#0369A1" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="700" letter-spacing="0.1em">KRX NEWS &amp; DART DISCLOSURES</text>
+
+  <text x="56" y="156" fill="#334155" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="19.5" font-weight="500">DART disclosures &amp; Toss Securities news in one unified schema.</text>
+
+  <rect x="56" y="192" width="116" height="32" rx="16" fill="#0369A1"/>
+  <circle cx="74" cy="208" r="4" fill="#34D399"/>
+  <text x="86" y="213" fill="#F8FAFC" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600">Python 3.11+</text>
+
+  <rect x="184" y="192" width="124" height="32" rx="16" fill="#ECFEFF" stroke="#A5F3FC" stroke-width="1.2"/>
+  <text x="202" y="213" fill="#155E75" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600">DART + Toss</text>
+
+  <rect x="320" y="192" width="116" height="32" rx="16" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1.2"/>
+  <text x="338" y="213" fill="#065F46" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600">Async httpx</text>
+
+  <!-- Right: News Feed Pulse Artwork -->
+  <!-- Back card -->
+  <rect x="814" y="34" width="310" height="84" rx="14" fill="#FFFFFF" stroke="#BAE6FD" stroke-width="1.5"/>
+  <rect x="838" y="56" width="96" height="10" rx="5" fill="#0369A1"/>
+  <rect x="838" y="76" width="212" height="8" rx="4" fill="#CBD5E1"/>
+  <rect x="838" y="92" width="160" height="8" rx="4" fill="#E2E8F0"/>
+  <circle cx="1096" cy="61" r="6" fill="#34D399"/>
+
+  <!-- Front card with Signal Pulse -->
+  <rect x="786" y="96" width="346" height="148" rx="16" fill="#FFFFFF" stroke="#7DD3FC" stroke-width="1.8"/>
+  <rect x="814" y="122" width="128" height="11" rx="5.5" fill="#0F172A"/>
+  <rect x="814" y="143" width="246" height="8" rx="4" fill="#94A3B8"/>
+  <circle cx="1098" cy="127" r="7" fill="#34D399"/>
+  <circle cx="1098" cy="127" r="12" stroke="#34D399" stroke-opacity="0.35" stroke-width="2"/>
+
+  <!-- Pulse Waveform Box -->
+  <rect x="814" y="168" width="290" height="54" rx="10" fill="#F0F9FF" stroke="#E0F2FE" stroke-width="1.2"/>
+  <path d="M828 196H894L912 178L932 214L952 184L968 196H1090" stroke="#06B6D4" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="932" cy="214" r="4" fill="#0369A1"/>
+  <circle cx="1090" cy="196" r="4.5" fill="#34D399"/>
+</svg>
