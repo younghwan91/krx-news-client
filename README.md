@@ -1,10 +1,15 @@
-# krx-news-client
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/brand/wordmark-dark.svg">
+  <img alt="krx-news-client" src="docs/images/brand/wordmark-light.svg" height="56">
+</picture>
+
+**한국어** | [English](README.en.md)
 
 **DART 공시와 토스증권 뉴스를 한 스키마로 받는 Python 클라이언트 — 기사 본문과 종목별 과거 뉴스까지, `pip install` 한 줄.**
 
 [![CI](https://github.com/younghwan91/krx-news-client/actions/workflows/ci.yml/badge.svg)](https://github.com/younghwan91/krx-news-client/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/github/license/younghwan91/krx-news-client)](https://github.com/younghwan91/krx-news-client/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/younghwan91/krx-news-client)](LICENSE)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-younghwan--chae-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/younghwan-chae/)
 
 <picture>
