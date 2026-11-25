@@ -33,28 +33,21 @@ Fetch full article bodies, per-ticker news history, and raw disclosure documents
 pip install krx-news-client   # Python 3.11+
 ```
 
-> `fetch_article_detail_raw`, 10,000-offset limit handling for per-ticker news, `size` validation, and DART key log masking landed after PyPI 0.4.0 and are currently only on `main`. Install from Git to use them: `pip install "krx-news-client @ git+https://github.com/younghwan91/krx-news-client"`.
-
 ```python
-import asyncio
-from krx_news_client import TossScraper
-
-async def main():
-    async with TossScraper() as scraper:
-        articles = await scraper.scrape_news()
-        for article in articles[:5]:
-            print(article.nation, article.title, article.published_at)
-
-asyncio.run(main())
+from krx_news_client import DartScraper
+async with DartScraper.from_env() as dart:   # export DART_API_KEY=... (OpenDART key)
+    for d in (await dart.scrape_disclosures())[:3]: print(d.published_at.date(), d.company, d.title)
 ```
 
-You will see recent domestic (`KR`) and US (`US`) headlines with tz-aware KST timestamps:
+Runs as-is in Jupyter or `python -m asyncio` (in a script, wrap it in `async def main()` and call `asyncio.run(main())`). It prints yesterday's and today's (KST) disclosures across all markets, newest first. Actual output from 2026-11-26:
 
 ```text
-KR 코스피, 외국인 순매수에 2%대 상승 마감 2025-06-10 15:30:00+09:00
-US 엔비디아, 실적 발표 앞두고 강세 2025-06-10 14:05:00+09:00
-...
+2026-11-25 콜마비앤에이치 중간(분기)배당락
+2026-11-25 SK증권제12호스팩 주권매매거래정지              (상장폐지 사유발생)
+2026-11-25 유안타제16호스팩 주권매매거래정지              (상장폐지 사유발생)
 ```
+
+Get a free OpenDART API key at [opendart.fss.or.kr](https://opendart.fss.or.kr/). Toss news needs no key and comes through `TossScraper` (see the [examples gallery](#examples-gallery)).
 
 ## What It Does
 
@@ -69,11 +62,59 @@ US 엔비디아, 실적 발표 앞두고 강세 2025-06-10 14:05:00+09:00
 - **Separate DART polling and backfill paths.** `scrape_disclosures()` handles multi-key auto-rotation and tolerant polling, while `search_disclosures*()` and `fetch_document()` provide strict backfilling.
 - **Built-in deduplication.** `Deduplicator` yields only unseen items by `id` for articles and `rcept_no` for disclosures.
 
-See the [Guide](docs/guide.en.md#detailed-usage) and [`examples/`](examples/) for full code examples.
+See the [Guide](docs/guide.en.md#detailed-usage) and [`examples/`](examples/) for full code examples. For how this differs from calling OpenDART directly, Naver, pykrx and FinanceDataReader, see [Compared with other approaches](docs/comparison.en.md).
+
+## Examples Gallery
+
+The snippets below run inside `async with DartScraper.from_env() as dart, TossScraper() as toss:` (with `from datetime import date` and `from krx_news_client import DartScraper, Deduplicator, TossScraper`). Every snippet is executed against mocked responses by [`tests/test_readme_gallery.py`](tests/test_readme_gallery.py).
+
+<!-- gallery:start -->
+**Disclosure alert for a watchlist** — one turn of a polling loop. Only new filings, corrections skipped.
+
+```python
+watch, seen = {"005930", "000660"}, Deduplicator()
+for d in seen.filter_new(await dart.scrape_disclosures()):
+    if d.ticker in watch and not d.is_correction: print(d.company, d.title, d.url)
+```
+
+**News timeline for a ticker** — page back through a ticker's news and print oldest first.
+
+```python
+news = await toss.scrape_company_news("005930", since=date(2026, 11, 1), max_pages=3)
+for a in reversed(news):  # results are newest first
+    print(f"{a.published_at:%m-%d %H:%M}  {a.title}  ({a.author})")
+```
+
+**News and filings on one timeline** — both models share `published_at` (KST), `source` and `title`.
+
+```python
+news = await toss.scrape_company_news("005930", since=date(2026, 11, 20), max_pages=1)
+filings = [d for d in await dart.scrape_disclosures(bgn_de="20261120") if d.ticker == "005930"]
+for x in sorted([*news, *filings], key=lambda x: x.published_at): print(x.published_at.date(), x.source, x.title)
+```
+
+**Feeding an LLM** — the full body of the latest article as a prompt. Pass `prompt` to whichever LLM SDK you use.
+
+```python
+[latest] = await toss.scrape_company_news("005930", max_pages=1, page_size=1)
+article = await toss.fetch_article_detail(latest.news_id)
+prompt = f"Summarize this article in three lines.\n\n# {article.title}\n\n{article.content}"
+```
+
+**Disclosure full text** — fetch the document zip by receipt number and take the tag-free body.
+
+```python
+d = next(d for d in await dart.scrape_disclosures() if not d.is_correction)
+[doc, *_] = await dart.fetch_document(d.rcept_no)
+print(d.title, doc.text[:300])
+```
+<!-- gallery:end -->
 
 ## Toss Caveats
 
 Because Toss is an unofficial internal API, it may break or block requests without notice.
+
+> **Checked 2026-11-26:** Toss rejects requests without browser session cookies with `400 invalid-client-state`, so `TossScraper` requests currently fail. DART features are unaffected. Progress is tracked in the [CHANGELOG](CHANGELOG.md).
 
 - **6-digit codes only.** A leading `A` is stripped automatically; any other format raises `ValueError` before requesting.
 - **1-indexed pages, max size 100.** `number=0` or `size=101` or higher raises `ValueError` before requesting.
@@ -87,8 +128,17 @@ See [Toss Caveats](docs/guide.en.md#toss-caveats) for the full list, response fi
 | Doc | What's inside |
 |---|---|
 | [Guide](docs/guide.en.md) | Detailed Toss & DART usage, design rationale, Toss API caveats, response fields, architecture |
+| [Comparison](docs/comparison.en.md) | Scope and code compared with calling OpenDART directly, Naver, pykrx and FinanceDataReader |
 | [Examples](examples/) | Basic usage and stock alert polling examples |
 | [Changelog](CHANGELOG.md) | Release history |
+
+## Works Well With
+
+| Repo | What it does |
+|---|---|
+| [kiwoom-client](https://github.com/younghwan91/kiwoom-client) | Python client for the Kiwoom REST API: quotes, flows, order book, orders, real-time WebSocket, MCP server |
+| [krx-fundamentals-client](https://github.com/younghwan91/krx-fundamentals-client) | Collects Korean company fundamentals from DART, KRX and Naver into Pydantic models |
+| [fin-checkup](https://github.com/younghwan91/fin-checkup) | Free tool that reads listed companies' financial statements as 17 traffic-light metrics, with formulas and thresholds shown; no investment advice |
 
 ## Contributing & Support
 
