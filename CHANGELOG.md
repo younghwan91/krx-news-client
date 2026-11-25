@@ -5,6 +5,26 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-26
+
+코드 변경은 없다. PyPI 페이지에 링크·키워드가 비어 있던 것을 채우는 메타데이터 릴리스다.
+
+### Added
+
+- **PyPI 메타데이터.** `project_urls`(Homepage·Documentation·Repository·Issues·Changelog),
+  `keywords`, 분류자(라이선스·대상·`Typing :: Typed`)를 `pyproject.toml`에 넣었다.
+- **[다른 방법과 비교](docs/comparison.md)(영문 `comparison.en.md`).** OpenDART 직접 호출·네이버·
+  pykrx·FinanceDataReader가 다루는 범위와 코드 비교. 다른 도구 설명은 각 공식 문서 기준(2026-11-26 확인).
+- **README 예제 갤러리와 실행 테스트.** 공시 알림·종목 뉴스 타임라인·뉴스+공시 타임라인·LLM 입력·
+  공시 원문 5개 조각과 3줄 빠른 시작을 `tests/test_readme_gallery.py`가 목 응답으로 실행한다.
+
+### Known issues
+
+- **토스 요청이 `400 invalid-client-state`로 거절된다(2026-11-26 실측).** 대시보드 뉴스·종목별
+  뉴스 모두 같은 응답이다. 브라우저에서는 `deviceId`·`SESSION` 등 세션 쿠키와 `app-version`·
+  `browser-tab-id` 헤더가 붙은 요청이 200을 받는다(Playwright로 확인). 종목별 뉴스 화면은
+  `/api/v2/news/companies/{code}/cursor` 경로도 쓴다. DART 기능은 영향이 없다.
+
 ## [0.5.0] - 2026-11-21
 
 ### Added
