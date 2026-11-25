@@ -1,0 +1,33 @@
+# krx-news-client
+
+> Async Python client that returns Korean stock-market news and filings from DART (OpenDART official API) and Toss Securities (unofficial internal API) as one schema: `Disclosure` and `NewsArticle` share `id`, `source`, `title`, `url` and `published_at` (KST, timezone-aware). Includes article bodies, per-ticker news history, filing documents, polling de-duplication and correction-filing detection. A library, not a server: no storage, scheduler or cache.
+
+Install `pip install krx-news-client`, Python 3.11+, import name `krx_news_client`.
+
+Rules for writing code against this library:
+
+- Everything is async: `async with DartScraper.from_env() as dart, TossScraper() as toss:`. In a script wrap it in `asyncio.run(main())`.
+- `DartScraper.from_env()` reads `DART_API_KEY` (free key from https://opendart.fss.or.kr). Never hard-code or print keys. `TossScraper()` needs no key.
+- Main calls: `dart.scrape_disclosures()` (yesterday and today, newest first), `dart.fetch_document(rcept_no)`, `toss.scrape_company_news("005930", since=date(...), max_pages=3)`, `toss.fetch_article_detail(news_id)`. Results are newest first.
+- Stock codes are 6 characters (`005930`); an invalid code or page size raises `ValueError`. Toss pages start at 1, page size is at most 100, and the offset limit is 10,000.
+- Toss is an unofficial API. A changed response shape raises `TossResponseError` instead of returning an empty list; DART daily quota exhaustion raises `DartQuotaExceededError`. Do not treat an exception as "no news".
+- `Deduplicator().filter_new(items)` drops items already seen in a polling loop; `Disclosure.is_correction` marks correction filings.
+- Strict vs tolerant: `search_disclosures*` raises on errors (for backfills), `scrape_disclosures` logs and continues (for polling). Do not mix them up.
+- Timestamps are KST with tzinfo. Do not make them naive.
+
+## Docs
+
+- [README (한국어)](https://raw.githubusercontent.com/younghwan91/krx-news-client/main/README.md): quick start, example gallery (watch-list alerts, ticker timeline, news plus filings, LLM prompt input, filing text), Toss caveats
+- [README (English)](https://raw.githubusercontent.com/younghwan91/krx-news-client/main/README.en.md): the same, in English
+- [Guide (한국어)](https://raw.githubusercontent.com/younghwan91/krx-news-client/main/docs/guide.md): detailed usage, design background, Toss API caveats, response fields, structure
+- [Guide (English)](https://raw.githubusercontent.com/younghwan91/krx-news-client/main/docs/guide.en.md): the same, in English
+- [Comparison with other approaches](https://raw.githubusercontent.com/younghwan91/krx-news-client/main/docs/comparison.md): direct OpenDART calls, Naver, pykrx and FinanceDataReader: scope and code side by side
+- [Example: basic usage](https://raw.githubusercontent.com/younghwan91/krx-news-client/main/examples/basic_usage.py): fetch disclosures and news
+- [Example: stock alert](https://raw.githubusercontent.com/younghwan91/krx-news-client/main/examples/stock_alert.py): polling alert for a watch list
+
+## Optional
+
+- [Changelog](https://raw.githubusercontent.com/younghwan91/krx-news-client/main/CHANGELOG.md): release history
+- [CONTRIBUTING](https://raw.githubusercontent.com/younghwan91/krx-news-client/main/CONTRIBUTING.md): dev setup, tests, commit convention
+- [Sibling: krx-fundamentals-client](https://github.com/younghwan91/krx-fundamentals-client): company fundamentals (financial statements, ratios, dividends) from DART and Naver
+- [Sibling: kiwoom-client](https://github.com/younghwan91/kiwoom-client): Kiwoom Securities REST API client for prices and orders
