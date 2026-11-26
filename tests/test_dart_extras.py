@@ -173,6 +173,11 @@ class TestFetchDocument:
 
 
 class TestDeduplicator:
+    @pytest.mark.parametrize("max_size", [0, -1])
+    def test_rejects_nonpositive_max_size(self, max_size):
+        with pytest.raises(ValueError, match=rf"^max_size 는 1 이상이어야 합니다: {max_size}$"):
+            Deduplicator(max_size=max_size)
+
     def test_filters_seen(self):
         dedup = Deduplicator(key=lambda x: x)
         assert dedup.filter_new([1, 2, 2]) == [1, 2]

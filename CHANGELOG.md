@@ -5,6 +5,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `Deduplicator`의 `max_size`가 1 미만이면 생성 시 `ValueError`를 발생시킨다.
+
 ## [0.5.1] - 2026-11-26
 
 코드 변경은 없다. PyPI 페이지에 링크·키워드가 비어 있던 것을 채우는 메타데이터 릴리스다.
