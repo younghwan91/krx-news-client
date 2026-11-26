@@ -14,6 +14,8 @@
 
 ### 토스: 본문·종목별 이력
 
+> 2026-11-26부터 토스가 세션 없는 요청을 막아 아래 호출은 `TossBlockedError`를 올린다. 뉴스는 README의 `YonhapScraper`·`NaverNewsScraper`로 받는다.
+
 ```python
 from datetime import date
 
@@ -56,7 +58,7 @@ from krx_news_client import Deduplicator
 
 dedup = Deduplicator()
 while True:
-    for article in dedup.filter_new(await toss.scrape_news()):
+    for article in dedup.filter_new(await yna.scrape_news()):
         handle(article)
     await asyncio.sleep(180)
 ```
@@ -92,7 +94,7 @@ while True:
 | 필드 | 설명 |
 |---|---|
 | `id` | 고유 ID (`{source}:{url의 md5 12자}`) |
-| `source` | 소스 (`dart`/`toss`) |
+| `source` | 소스 (`dart`/`yonhap`/`naver`/`toss`) |
 | `category` | `disclosure`/`market`/`stock`/`economy`/`analysis`/`breaking` |
 | `title` | 제목 |
 | `url` | 원문 링크 |

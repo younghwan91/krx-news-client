@@ -66,6 +66,43 @@ class TossResponseError(ValueError):
     비공식 API 라 형식이 예고 없이 바뀔 수 있다. 백필 경로에서 이걸 빈 결과로
     뭉개면 조용한 결측이 되므로 예외로 올린다.
     """
+
+
+#: 토스가 세션 없는 요청을 거절할 때 주는 400 의 ``error.code``(2026-11-26 실측:
+#: ``{"error":{"statusCode":400,"code":"invalid-client-state","message":null}}``).
+BLOCKED_ERROR_CODE = "invalid-client-state"
+#: ``TossBlockedError`` 메시지. 우회(브라우저 세션 위조)는 하지 않는다 -- 접근 통제다.
+BLOCKED_HELP = (
+    "Toss now rejects requests without a browser session (400 invalid-client-state, "
+    "since 2026-11-26), so TossScraper cannot fetch news. Use YonhapScraper (no key, "
+    "Yonhap RSS, non-commercial use) or NaverNewsScraper.from_env() (official Naver "
+    "Search API, free NAVER_CLIENT_ID/NAVER_CLIENT_SECRET). DartScraper is unaffected."
+)
+
+
+class TossBlockedError(TossResponseError):
+    """토스가 요청을 세션 검사(``400 invalid-client-state``)로 거절했다.
+
+    2026-11-26 부터 브라우저 세션 쿠키 없는 요청은 전부 이 응답을 받는다. 다시 보내도
+    같으므로 재시도하지 않고, ``scrape_news(strict=False)``·``fetch_article_detail``
+    에서도 삼키지 않고 올린다(조용한 0건·None 이 되지 않게). 대체 소스는
+    ``YonhapScraper``·``NaverNewsScraper``. ``response`` 에 원 응답이 있다.
+    """
+
+    def __init__(self, response: httpx.Response | None = None) -> None:
+        self.response = response
+        super().__init__(BLOCKED_HELP)
+
+
+def _is_blocked(response: httpx.Response) -> bool:
+    if response.status_code != 400:
+        return False
+    try:
+        return (response.json().get("error") or {}).get("code") == BLOCKED_ERROR_CODE
+    except (ValueError, AttributeError):
+        return False
+
+
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
@@ -127,6 +164,15 @@ class TossScraper(BaseScraper):
     max_delay = 1.5
     default_headers = {"Referer": "https://tossinvest.com/"}
 
+    async def _request(self, method: str, url: str, **kwargs) -> httpx.Response:
+        """세션 차단(``400 invalid-client-state``)이면 ``TossBlockedError`` 로 바꿔 올린다."""
+        try:
+            return await super()._request(method, url, **kwargs)
+        except httpx.HTTPStatusError as e:
+            if _is_blocked(e.response):
+                raise TossBlockedError(e.response) from e
+            raise
+
     async def scrape_news(self, *, strict: bool = False) -> list[NewsArticle]:
         """대시보드 3개 피드의 현재 스냅샷.
 
@@ -138,11 +184,16 @@ class TossScraper(BaseScraper):
             strict: False(기본)면 피드 하나가 실패해도 로그만 남기고 나머지를
                 돌려준다. True 면 첫 실패를 그대로 올린다 -- 결측을 조용히 넘기면
                 안 되는 호출부용.
+
+        Raises:
+            TossBlockedError: 토스가 세션 검사로 거절했다(``strict`` 와 무관).
         """
         articles: list[NewsArticle] = []
         for feed_type, category in FEED_TYPES.items():
             try:
                 articles.extend(await self._fetch_feed(feed_type, category))
+            except TossBlockedError:
+                raise  # 피드마다 같은 차단이다 -- 로그 세 줄 뒤 빈 목록으로 뭉개지 않는다.
             except Exception:
                 if strict:
                     raise

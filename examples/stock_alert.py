@@ -1,8 +1,9 @@
 """종목 알림 예제.
 
-관심 종목 키워드가 포함된 토스 뉴스를 주기적으로 확인하고 새 항목이 있으면
+관심 종목 키워드가 포함된 연합뉴스 RSS 기사(키 없음, 개인·비상업 용도)를
+주기적으로 확인하고 새 항목이 있으면
 알림을 출력합니다. 실제 서비스에서는 send_alert()를 Slack/Telegram/Discord
-웹훅으로 교체하세요. (DART 공시를 함께 보려면 DartScraper(api_key=...)를
+웹훅으로 교체하세요. (DART 공시를 함께 보려면 DartScraper.from_env()를
 추가로 호출하면 됩니다.)
 """
 
@@ -11,7 +12,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 
-from krx_news_client import NewsArticle, TossScraper
+from krx_news_client import NewsArticle, YonhapScraper
 
 
 @dataclass
@@ -43,17 +44,17 @@ def send_alert(item_name: str, title: str, url: str) -> None:
 
 
 async def run_alert_loop(interval: int = 60) -> None:
-    """메인 감시 루프 — 매 주기마다 토스 뉴스를 다시 가져와 관심 종목과 대조한다."""
+    """메인 감시 루프 — 매 주기마다 연합뉴스 피드를 다시 가져와 관심 종목과 대조한다."""
     seen_ids: set[str] = set()
     names = ", ".join(w.name for w in WATCHLIST)
     print(f"📡 종목 알림 시작: {names}")
     print(f"   갱신 주기: {interval}초 | Ctrl+C로 종료\n")
 
-    scraper = TossScraper()
+    scraper = YonhapScraper()
     try:
         while True:
             try:
-                articles = await scraper.scrape_news()
+                articles = await scraper.scrape_news(["market", "industry"])
             except Exception as e:  # noqa: BLE001 — 한 주기 실패해도 다음 주기에 계속
                 print(f"⚠️  뉴스 조회 실패: {e}")
                 await asyncio.sleep(interval)
