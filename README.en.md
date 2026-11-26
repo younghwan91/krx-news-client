@@ -9,7 +9,7 @@
 
 **A Python client for DART disclosures and Korean stock news (Yonhap RSS, Naver Search API) in one unified schema.**
 
-From a keyless news feed to per-company news search and raw disclosure documents, in one `pip install`.
+From a keyless news feed to per-company news search and raw disclosure documents: from Python, from your terminal with one `uvx krx-news-client`, or from an AI agent through the [MCP server](#ai-agents-mcp).
 
 [![CI](https://github.com/younghwan91/krx-news-client/actions/workflows/ci.yml/badge.svg)](https://github.com/younghwan91/krx-news-client/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
@@ -48,6 +48,43 @@ Runs as-is in Jupyter or `python -m asyncio` (in a script, wrap it in `async def
 ```
 
 Disclosures come through `DartScraper.from_env()` (`DART_API_KEY`, free at [opendart.fss.or.kr](https://opendart.fss.or.kr/)), and news searched by company name through `NaverNewsScraper.from_env()` (`NAVER_CLIENT_ID` and `NAVER_CLIENT_SECRET`, free from the [Naver Developers console](https://developers.naver.com/apps/#/register) with the "Search" API enabled). See the [examples gallery](#examples-gallery).
+
+## In Your Terminal
+
+One line, nothing to install. With no key at all you get the latest Yonhap Market+ articles.
+
+<img alt="Real terminal output of krx-news watch and krx-news dart: Yonhap articles and DART filings for a watched stock, and a list of buyback filings" src="docs/images/cli-demo.png" width="100%">
+
+```bash
+uvx krx-news-client                         # latest Yonhap Market+ articles (no key)
+uvx krx-news-client watch -t 005930 000660  # one line per new article or filing for your watch list
+```
+
+After `pip install krx-news-client` the same command is `krx-news`. The CLI is on main and not yet in the latest PyPI release (0.5.1); until then run `uvx --from git+https://github.com/younghwan91/krx-news-client krx-news`.
+
+| Command | What it does | Key |
+|---|---|---|
+| `krx-news` (`news`) | Latest Yonhap section articles. `-t 005930` for one stock, `--json` for JSON | none |
+| `krx-news watch` | Prints only unseen articles (every 60 s) and filings (every 5 min). `Ctrl+C` to stop | filings need `DART_API_KEY` |
+| `krx-news dart -k 자기주식` | Recent filings by stock, title keyword or market. Correction filings are left out by default | `DART_API_KEY` |
+| `krx-news doc 20261126000830` | The filing document for a receipt number, as plain text | `DART_API_KEY` |
+| `krx-news search 삼성전자` | Naver news search, with source links | `NAVER_CLIENT_ID`, `_SECRET` |
+
+## AI Agents (MCP)
+
+An MCP server lets agents such as Claude or Cursor find DART filings and **read the filing text itself**, not just the list API, so the agent can check what was actually decided.
+
+```bash
+claude mcp add krx-news -e DART_API_KEY=your-key -- uvx --from 'krx-news-client[mcp]' krx-news-client-mcp
+```
+
+| Tool | What it does |
+|---|---|
+| `recent_disclosures` | Filings from the last 0-7 days, by stock code, title keyword (`유상증자`, `자기주식`, `공급계약`) or market |
+| `read_disclosure` | The filing text for a receipt number (up to `max_chars`) |
+| prompt `disclosure_briefing` | Reads one company's recent major filings and sums up each in three lines |
+
+Ask things like "read this week's filings for 에코프로 and tell me what was decided". There are deliberately no news tools: Yonhap RSS forbids AI use and the Naver Search API terms forbid feeding results to AI ([News Sources and Terms of Use](#news-sources-and-terms-of-use)). Every tool is read-only.
 
 ## What It Does
 

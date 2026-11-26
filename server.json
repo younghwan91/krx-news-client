@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.younghwan91/krx-news-client",
+  "title": "DART 전자공시 (Korean stock filings)",
+  "description": "Find Korean DART filings by stock, keyword or market and read the full filing text. Read-only.",
+  "repository": {
+    "url": "https://github.com/younghwan91/krx-news-client",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/younghwan91/krx-news-client#ai-agents-mcp",
+  "version": "0.6.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "krx-news-client",
+      "version": "0.6.0",
+      "runtimeHint": "uvx",
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "--from",
+          "value": "krx-news-client[mcp]==0.6.0"
+        }
+      ],
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "DART_API_KEY",
+          "description": "OpenDART API key (free at https://opendart.fss.or.kr/)",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ],
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}

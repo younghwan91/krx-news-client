@@ -4,6 +4,9 @@
 
 Install `pip install krx-news-client`, Python 3.11+, import name `krx_news_client`.
 
+CLI: `uvx krx-news-client` prints the latest Yonhap Market+ articles with no key; `krx-news watch -t 005930`, `krx-news dart -k 자기주식`, `krx-news doc <rcept_no>`, `krx-news search 삼성전자`, `--json`.
+MCP server (DART only, read-only): `claude mcp add krx-news -e DART_API_KEY=... -- uvx --from 'krx-news-client[mcp]' krx-news-client-mcp`; tools `recent_disclosures` and `read_disclosure`. News sources are not exposed over MCP because their terms forbid AI use.
+
 Rules for writing code against this library:
 
 - Everything is async: `async with DartScraper.from_env() as dart, YonhapScraper() as yna, NaverNewsScraper.from_env() as naver:`. In a script wrap it in `asyncio.run(main())`.
