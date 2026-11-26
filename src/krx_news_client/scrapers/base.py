@@ -42,6 +42,12 @@ USER_AGENTS = [
 ]
 
 
+#: 공식·공개 소스(네이버 API·연합뉴스 RSS)용 정직한 User-Agent.
+LIBRARY_USER_AGENT = (
+    "krx-news-client (+https://github.com/younghwan91/krx-news-client)"
+)
+
+
 def make_article_id(source: str, url: str) -> str:
     url_hash = hashlib.md5(url.encode()).hexdigest()[:12]
     return f"{source}:{url_hash}"

@@ -1,14 +1,14 @@
 [project]
 name = "krx-news-client"
 version = "0.5.1"
-description = "한국 주식시장 뉴스·공시 수집 클라이언트 라이브러리 (토스/DART)"
+description = "한국 주식시장 뉴스·공시 수집 클라이언트 라이브러리 (DART·연합뉴스 RSS·네이버 검색 API)"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 authors = [{ name = "Younghwan Chae", email = "chyohw97@gmail.com" }]
 keywords = [
     "dart", "opendart", "disclosure", "공시", "korea", "krx", "kospi", "kosdaq",
-    "stock", "news", "뉴스", "tossinvest", "finance", "quant", "backtest",
+    "stock", "news", "뉴스", "naver", "yonhap", "rss", "tossinvest", "finance", "quant", "backtest",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

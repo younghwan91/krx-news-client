@@ -5,6 +5,32 @@
 
 ## [Unreleased]
 
+토스가 세션 없는 요청을 막은 뒤(2026-11-26) 뉴스 절반이 끊긴 것을 공식·공개 소스로 되살린다.
+토스 차단을 우회(브라우저 세션·쿠키·헤더 위조)하지 않는다 -- 접근 통제다.
+
+### Added
+
+- **`YonhapScraper` -- 키 없는 연합뉴스 RSS.** 마켓+·경제·산업·전체 섹션 피드를 `NewsArticle`로 돌려준다.
+  `tickers`는 제목·요약의 `회사명[005930]` 표기에서 뽑고, `pubDate`는 KST tz로 읽는다. 공개 RSS만 읽고
+  기사 페이지는 긁지 않는다. 2026-11-26 확인: robots `Allow: /`(`/rss/` 허용), RSS 안내는 "비상업적
+  블로그와 개인 용도만 허용", 피드 `copyright`는 "AI 학습 및 활용 금지". 정직한 User-Agent를 보낸다.
+- **`NaverNewsScraper` -- 네이버 검색 API(뉴스).** `from_env()`가 `NAVER_CLIENT_ID`·`NAVER_CLIENT_SECRET`을
+  읽고, 없으면 발급 방법을 담은 `NaverKeyMissingError`를 낸다. `search_news(query, tickers=..., since=...)`는
+  최신순으로 최대 1,099건(`start` ≤ 1000)까지 넘기고, `display`·`start`·`sort` 범위 밖 인자는 요청 전에
+  `ValueError`, API 오류는 `NaverAPIError`(401/403이면 키 안내 포함). 약관(2026-11-26 확인)상 결과 저장·
+  캐싱(서버 21일 초과), AI 입력, 제3자 제공이 금지라 README "뉴스 소스와 이용 조건"에 적었다.
+- **`TossBlockedError`(`TossResponseError` 하위).** 토스가 `400 invalid-client-state`를 주면 재시도 없이
+  이 예외를 올리고 메시지에 대체 소스를 적는다. `scrape_news(strict=False)`도, `fetch_article_detail`
+  (원래 400을 `None`으로 바꾸던 경로)도 이걸 삼키지 않는다 -- 조용한 0건·None이 되지 않게.
+- `NewsSource.NAVER`·`NewsSource.YONHAP`.
+
+### Changed
+
+- **README 빠른 시작과 갤러리가 동작하는 소스로 시작한다.** 빠른 시작은 키 없는 `YonhapScraper`,
+  갤러리는 DART·연합뉴스·네이버로 바꿨다. 토스 기사 본문을 LLM에 넣던 조각은 뉴스 소스 약관이 AI 이용을
+  막아서 DART 공시 원문을 LLM 입력으로 만드는 조각으로 바꿨다. `examples/`·`llms.txt`·가이드도 맞췄다.
+- 토스 소스는 지우지 않았다. 토스가 다시 열리면 그대로 동작한다.
+
 ## [0.5.1] - 2026-11-26
 
 코드 변경은 없다. PyPI 페이지에 링크·키워드가 비어 있던 것을 채우는 메타데이터 릴리스다.
