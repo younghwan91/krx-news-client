@@ -23,6 +23,18 @@
   이 예외를 올리고 메시지에 대체 소스를 적는다. `scrape_news(strict=False)`도, `fetch_article_detail`
   (원래 400을 `None`으로 바꾸던 경로)도 이걸 삼키지 않는다 -- 조용한 0건·None이 되지 않게.
 - `NewsSource.NAVER`·`NewsSource.YONHAP`.
+- **`krx-news` CLI.** `uvx krx-news-client`(또는 설치 후 `krx-news`) 한 줄이면 키 없이 연합뉴스 마켓+ 최신
+  기사가 나온다. `watch`(새 기사 60초·공시 5분 간격, 처음 본 것만), `dart`(종목·제목 키워드·시장 필터),
+  `doc`(공시 원문 텍스트), `search`(네이버), `--json`. 표준 라이브러리 `argparse`만 써 의존성이 늘지 않는다.
+  폴링 간격 하한(RSS 30초, DART 120초)을 둬 공개 피드와 DART 일한도를 지킨다 -- DART 전체 시장 검색은
+  한 번에 수십 호출이라 `watch`는 오늘 공시만 본다.
+- **MCP 서버 `krx-news-client-mcp`(`krx-news-client[mcp]`).** 도구 `recent_disclosures`·`read_disclosure`와
+  프롬프트 `disclosure_briefing`. DART 전용이다 -- 연합뉴스 RSS("AI 학습 및 활용 금지")와 네이버 검색 API
+  (AI 입력 금지)는 약관상 LLM 입력으로 줄 수 없어 넣지 않았다. 잘못된 인자·DART 오류는 메시지째 돌려줘
+  에이전트가 고쳐 부를 수 있게 했다. MCP 레지스트리용 `server.json`.
+- **`krx_news_client.queries`.** CLI 와 MCP 가 같이 쓰는 `recent_disclosures`(0~7일, 접수번호 역순)·
+  `disclosure_text`·`stock_code`. 잘못된 종목코드·기간·접수번호는 요청 전에 `ValueError`. 2026-11-27 실 DART로
+  `dart`·`doc`·MCP stdio 왕복을 확인했고, 방금 접수된 공시는 원문이 아직 없어 DART가 `014`를 준다(한 줄 오류로 보임).
 
 ### Changed
 

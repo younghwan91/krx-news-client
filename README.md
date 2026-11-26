@@ -9,7 +9,7 @@
 
 **DART 공시와 한국 증시 뉴스(연합뉴스 RSS·네이버 검색 API)를 한 스키마로 받는 Python 클라이언트입니다.**
 
-키 없는 뉴스 피드부터 종목 뉴스 검색, 공시 원문까지 `pip install` 한 줄로 바로 씁니다.
+키 없는 뉴스 피드부터 종목 뉴스 검색, 공시 원문까지 씁니다. 파이썬 코드로도, 터미널에서 `uvx krx-news-client` 한 줄로도, AI 에이전트의 [MCP 서버](#ai-에이전트mcp)로도 쓸 수 있습니다.
 
 [![CI](https://github.com/younghwan91/krx-news-client/actions/workflows/ci.yml/badge.svg)](https://github.com/younghwan91/krx-news-client/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
@@ -48,6 +48,43 @@ Jupyter나 `python -m asyncio`에서 그대로 실행됩니다(스크립트에�
 ```
 
 공시는 `DartScraper.from_env()`(`DART_API_KEY`, [opendart.fss.or.kr](https://opendart.fss.or.kr/)에서 무료 발급), 종목명으로 찾는 뉴스는 `NaverNewsScraper.from_env()`(`NAVER_CLIENT_ID`·`NAVER_CLIENT_SECRET`, [네이버 개발자 센터](https://developers.naver.com/apps/#/register)에서 "검색" API로 무료 발급)로 받습니다(아래 [예제 갤러리](#예제-갤러리)).
+
+## 터미널에서 바로
+
+설치 없이 한 줄로 실행합니다. 키가 없어도 연합뉴스 마켓+ 최신 기사가 나옵니다.
+
+<img alt="krx-news watch 와 krx-news dart 의 실제 터미널 출력: 관심 종목의 연합뉴스 기사와 DART 공시, 자기주식 공시 목록" src="docs/images/cli-demo.png" width="100%">
+
+```bash
+uvx krx-news-client                         # 연합뉴스 마켓+ 최신 기사 (키 없음)
+uvx krx-news-client watch -t 005930 000660  # 관심 종목의 새 기사·공시가 뜰 때마다 한 줄씩
+```
+
+`pip install krx-news-client`로 설치했다면 같은 명령을 `krx-news`로 씁니다. PyPI 최신(0.5.1)에는 아직 CLI가 없고 main에만 있습니다. 그 전까지는 `uvx --from git+https://github.com/younghwan91/krx-news-client krx-news`로 실행하세요.
+
+| 명령 | 하는 일 | 키 |
+|---|---|---|
+| `krx-news` (`news`) | 연합뉴스 섹션 최신 기사. `-t 005930`으로 종목만, `--json`으로 JSON | 없음 |
+| `krx-news watch` | 새 기사(60초마다)·공시(5분마다)를 처음 본 것만 찍습니다. `Ctrl+C`로 끝냅니다 | 공시는 `DART_API_KEY` |
+| `krx-news dart -k 자기주식` | 최근 공시를 종목·제목 키워드·시장으로 거릅니다. 정정 공시는 기본으로 뺍니다 | `DART_API_KEY` |
+| `krx-news doc 20261126000830` | 접수번호의 공시 원문을 태그 걷어낸 텍스트로 | `DART_API_KEY` |
+| `krx-news search 삼성전자` | 네이버 뉴스 검색, 원문 링크와 함께 | `NAVER_CLIENT_ID`·`_SECRET` |
+
+## AI 에이전트(MCP)
+
+Claude·Cursor 같은 에이전트가 DART 공시를 직접 찾고 **원문 본문까지 읽게** 하는 MCP 서버가 들어 있습니다. 목록 API만 감싸는 대신, 에이전트가 "무엇이 결정됐는지"를 원문에서 확인할 수 있습니다.
+
+```bash
+claude mcp add krx-news -e DART_API_KEY=발급받은키 -- uvx --from 'krx-news-client[mcp]' krx-news-client-mcp
+```
+
+| 도구 | 하는 일 |
+|---|---|
+| `recent_disclosures` | 최근 0~7일 공시를 종목코드·제목 키워드(`유상증자`·`자기주식`·`공급계약`)·시장으로 거릅니다 |
+| `read_disclosure` | 접수번호로 공시 원문 텍스트를 읽습니다(`max_chars`까지) |
+| 프롬프트 `disclosure_briefing` | 한 종목의 최근 주요 공시를 원문까지 읽고 건마다 세 줄로 정리합니다 |
+
+"에코프로 이번 주 공시 원문까지 읽고 무엇이 결정됐는지 정리해 줘"처럼 물으면 됩니다. 뉴스 도구는 일부러 넣지 않았습니다. 연합뉴스 RSS는 "AI 학습 및 활용 금지"이고, 네이버 검색 API 약관은 결과를 AI 입력으로 쓰지 못하게 합니다([뉴스 소스와 이용 조건](#뉴스-소스와-이용-조건)). 모든 도구는 읽기 전용입니다.
 
 ## 무엇을 하나
 
