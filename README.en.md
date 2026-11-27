@@ -60,7 +60,7 @@ uvx krx-news-client                         # latest Yonhap Market+ articles (no
 uvx krx-news-client watch -t 005930 000660  # one line per new article or filing for your watch list
 ```
 
-After `pip install krx-news-client` the same command is `krx-news`. The CLI is on main and not yet in the latest PyPI release (0.5.1); until then run `uvx --from git+https://github.com/younghwan91/krx-news-client krx-news`.
+After `pip install krx-news-client` (0.6.0 or later) the same command is `krx-news`.
 
 | Command | What it does | Key |
 |---|---|---|
