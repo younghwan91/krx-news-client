@@ -303,3 +303,9 @@ def test_server_json_matches_package():
     assert package["runtimeArguments"][0]["value"] == f"krx-news-client[mcp]=={version}"
     # uvx --from krx-news-client[mcp] krx-news-client mcp -> MCP 서버
     assert [a["value"] for a in package["packageArguments"]] == ["mcp"]
+
+
+def test_readme_carries_mcp_registry_name():
+    # MCP 레지스트리는 PyPI README 에서 이 줄을 찾아 패키지 소유를 확인한다.
+    name = json.loads((ROOT / "server.json").read_text())["name"]
+    assert f"mcp-name: {name}" in (ROOT / "README.md").read_text(encoding="utf-8")

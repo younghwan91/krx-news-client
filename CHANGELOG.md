@@ -5,6 +5,14 @@
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-28
+
+### Added
+
+- **공식 MCP 레지스트리 자동 등록.** PyPI 배포가 성공하면 `mcp-registry.yml`이 `server.json`을
+  `io.github.younghwan91/krx-news-client`로 올린다(GitHub OIDC, 저장할 비밀값 없음). 레지스트리의 PyPI
+  소유 확인을 위해 README에 `mcp-name` 주석을 넣었다 -- 0.6.0 README에는 없어 등록할 수 없었다.
+
 ## [0.6.0] - 2026-11-28
 
 토스가 세션 없는 요청을 막은 뒤(2026-11-26) 뉴스 절반이 끊긴 것을 공식·공개 소스로 되살린다.

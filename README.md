@@ -72,6 +72,8 @@ uvx krx-news-client watch -t 005930 000660  # 관심 종목의 새 기사·공�
 
 ## AI 에이전트(MCP)
 
+<!-- mcp-name: io.github.younghwan91/krx-news-client (MCP registry PyPI ownership check, see server.json) -->
+
 Claude·Cursor 같은 에이전트가 DART 공시를 직접 찾고 **원문 본문까지 읽게** 하는 MCP 서버가 들어 있습니다. 목록 API만 감싸는 대신, 에이전트가 "무엇이 결정됐는지"를 원문에서 확인할 수 있습니다.
 
 ```bash
