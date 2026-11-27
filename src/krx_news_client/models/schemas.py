@@ -34,7 +34,9 @@ def is_correction(report_nm: str) -> bool:
 
 class NewsSource(StrEnum):
     DART = "dart"
+    NAVER = "naver"
     TOSS = "toss"
+    YONHAP = "yonhap"
 
 
 class NewsCategory(StrEnum):
@@ -61,7 +63,7 @@ class NewsArticle(BaseModel):
     author: str = ""
     published_at: datetime
     collected_at: datetime = Field(default_factory=_now_kst)
-    news_id: str = Field(default="", description="소스 고유 기사 ID (토스 newsId)")
+    news_id: str = Field(default="", description="소스 고유 기사 ID (토스 newsId, 연합뉴스 AKR…)")
     news_type: str = Field(default="", description="소스 기사 유형 (토스 newsType)")
     nation: str = Field(default="", description="기사 대상 시장 (토스: KR/US)")
     sentiment: str = Field(default="", description="소스가 붙인 감성 라벨 (토스 상세: POSITIVE 등)")

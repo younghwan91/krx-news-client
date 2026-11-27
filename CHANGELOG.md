@@ -5,6 +5,44 @@
 
 ## [Unreleased]
 
+토스가 세션 없는 요청을 막은 뒤(2026-11-26) 뉴스 절반이 끊긴 것을 공식·공개 소스로 되살린다.
+토스 차단을 우회(브라우저 세션·쿠키·헤더 위조)하지 않는다 -- 접근 통제다.
+
+### Added
+
+- **`YonhapScraper` -- 키 없는 연합뉴스 RSS.** 마켓+·경제·산업·전체 섹션 피드를 `NewsArticle`로 돌려준다.
+  `tickers`는 제목·요약의 `회사명[005930]` 표기에서 뽑고, `pubDate`는 KST tz로 읽는다. 공개 RSS만 읽고
+  기사 페이지는 긁지 않는다. 2026-11-26 확인: robots `Allow: /`(`/rss/` 허용), RSS 안내는 "비상업적
+  블로그와 개인 용도만 허용", 피드 `copyright`는 "AI 학습 및 활용 금지". 정직한 User-Agent를 보낸다.
+- **`NaverNewsScraper` -- 네이버 검색 API(뉴스).** `from_env()`가 `NAVER_CLIENT_ID`·`NAVER_CLIENT_SECRET`을
+  읽고, 없으면 발급 방법을 담은 `NaverKeyMissingError`를 낸다. `search_news(query, tickers=..., since=...)`는
+  최신순으로 최대 1,099건(`start` ≤ 1000)까지 넘기고, `display`·`start`·`sort` 범위 밖 인자는 요청 전에
+  `ValueError`, API 오류는 `NaverAPIError`(401/403이면 키 안내 포함). 약관(2026-11-26 확인)상 결과 저장·
+  캐싱(서버 21일 초과), AI 입력, 제3자 제공이 금지라 README "뉴스 소스와 이용 조건"에 적었다.
+- **`TossBlockedError`(`TossResponseError` 하위).** 토스가 `400 invalid-client-state`를 주면 재시도 없이
+  이 예외를 올리고 메시지에 대체 소스를 적는다. `scrape_news(strict=False)`도, `fetch_article_detail`
+  (원래 400을 `None`으로 바꾸던 경로)도 이걸 삼키지 않는다 -- 조용한 0건·None이 되지 않게.
+- `NewsSource.NAVER`·`NewsSource.YONHAP`.
+- **`krx-news` CLI.** `uvx krx-news-client`(또는 설치 후 `krx-news`) 한 줄이면 키 없이 연합뉴스 마켓+ 최신
+  기사가 나온다. `watch`(새 기사 60초·공시 5분 간격, 처음 본 것만), `dart`(종목·제목 키워드·시장 필터),
+  `doc`(공시 원문 텍스트), `search`(네이버), `--json`. 표준 라이브러리 `argparse`만 써 의존성이 늘지 않는다.
+  폴링 간격 하한(RSS 30초, DART 120초)을 둬 공개 피드와 DART 일한도를 지킨다 -- DART 전체 시장 검색은
+  한 번에 수십 호출이라 `watch`는 오늘 공시만 본다.
+- **MCP 서버 `krx-news-client-mcp`(`krx-news-client[mcp]`).** 도구 `recent_disclosures`·`read_disclosure`와
+  프롬프트 `disclosure_briefing`. DART 전용이다 -- 연합뉴스 RSS("AI 학습 및 활용 금지")와 네이버 검색 API
+  (AI 입력 금지)는 약관상 LLM 입력으로 줄 수 없어 넣지 않았다. 잘못된 인자·DART 오류는 메시지째 돌려줘
+  에이전트가 고쳐 부를 수 있게 했다. MCP 레지스트리용 `server.json`.
+- **`krx_news_client.queries`.** CLI 와 MCP 가 같이 쓰는 `recent_disclosures`(0~7일, 접수번호 역순)·
+  `disclosure_text`·`stock_code`. 잘못된 종목코드·기간·접수번호는 요청 전에 `ValueError`. 2026-11-27 실 DART로
+  `dart`·`doc`·MCP stdio 왕복을 확인했고, 방금 접수된 공시는 원문이 아직 없어 DART가 `014`를 준다(한 줄 오류로 보임).
+
+### Changed
+
+- **README 빠른 시작과 갤러리가 동작하는 소스로 시작한다.** 빠른 시작은 키 없는 `YonhapScraper`,
+  갤러리는 DART·연합뉴스·네이버로 바꿨다. 토스 기사 본문을 LLM에 넣던 조각은 뉴스 소스 약관이 AI 이용을
+  막아서 DART 공시 원문을 LLM 입력으로 만드는 조각으로 바꿨다. `examples/`·`llms.txt`·가이드도 맞췄다.
+- 토스 소스는 지우지 않았다. 토스가 다시 열리면 그대로 동작한다.
+
 ### Fixed
 
 - `Deduplicator`의 `max_size`가 1 미만이면 생성 시 `ValueError`를 발생시킨다.

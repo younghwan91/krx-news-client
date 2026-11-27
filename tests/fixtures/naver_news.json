@@ -1,0 +1,29 @@
+{
+  "lastBuildDate": "Thu, 26 Nov 2026 20:10:00 +0900",
+  "total": 3,
+  "start": 1,
+  "display": 3,
+  "items": [
+    {
+      "title": "<b>삼성전자</b>, &quot;HBM4 양산&quot; 공급 확대",
+      "originallink": "https://www.example-press.co.kr/news/1001",
+      "link": "https://n.news.naver.com/mnews/article/001/0000001001",
+      "description": "<b>삼성전자</b>[005930]가 차세대 고대역폭 메모리 공급을 늘린다...",
+      "pubDate": "Thu, 26 Nov 2026 19:30:00 +0900"
+    },
+    {
+      "title": "코스피, 외국인 매수에 상승 마감",
+      "originallink": "https://www.example-press.co.kr/news/1000",
+      "link": "https://www.example-press.co.kr/news/1000",
+      "description": "<b>삼성전자</b>와 SK하이닉스[000660]가 지수를 끌어올렸다...",
+      "pubDate": "Thu, 26 Nov 2026 15:45:00 +0900"
+    },
+    {
+      "title": "<b>삼성전자</b> 노사 임금 협상 재개",
+      "originallink": "https://www.example-press.co.kr/news/0999",
+      "link": "https://n.news.naver.com/mnews/article/001/0000000999",
+      "description": "<b>삼성전자</b> 노사가 협상을 다시 시작했다...",
+      "pubDate": "Wed, 18 Nov 2026 09:00:00 +0900"
+    }
+  ]
+}

@@ -14,6 +14,8 @@ New here? Start with the [README](../README.en.md).
 
 ### Toss: Article Bodies & Per-Ticker History
 
+> Since 2026-11-26 Toss blocks session-less requests, so the calls below raise `TossBlockedError`. Get news from `YonhapScraper` or `NaverNewsScraper` (see the README).
+
 ```python
 from datetime import date
 
@@ -56,7 +58,7 @@ from krx_news_client import Deduplicator
 
 dedup = Deduplicator()
 while True:
-    for article in dedup.filter_new(await toss.scrape_news()):
+    for article in dedup.filter_new(await yna.scrape_news()):
         handle(article)
     await asyncio.sleep(180)
 ```
@@ -92,7 +94,7 @@ Request throttling defaults to 0.5–1.5s random jitter for Toss (`BaseScraper` 
 | Field | Description |
 |---|---|
 | `id` | Unique ID (`{source}:{12-char md5 of url}`) |
-| `source` | Source (`dart` / `toss`) |
+| `source` | Source (`dart` / `yonhap` / `naver` / `toss`) |
 | `category` | `disclosure` / `market` / `stock` / `economy` / `analysis` / `breaking` |
 | `title` | Headline |
 | `url` | Article URL |

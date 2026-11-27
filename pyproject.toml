@@ -1,14 +1,15 @@
 [project]
 name = "krx-news-client"
-version = "0.5.1"
-description = "한국 주식시장 뉴스·공시 수집 클라이언트 라이브러리 (토스/DART)"
+version = "0.6.0"
+description = "한국 증시 뉴스·DART 공시 Python 클라이언트 + 터미널 CLI + AI 에이전트용 MCP 서버 (DART·연합뉴스 RSS·네이버 검색 API)"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.11"
 authors = [{ name = "Younghwan Chae", email = "chyohw97@gmail.com" }]
 keywords = [
     "dart", "opendart", "disclosure", "공시", "korea", "krx", "kospi", "kosdaq",
-    "stock", "news", "뉴스", "tossinvest", "finance", "quant", "backtest",
+    "stock", "news", "뉴스", "naver", "yonhap", "rss", "tossinvest", "finance", "quant", "backtest",
+    "mcp", "mcp-server", "model-context-protocol", "claude", "ai-agents", "cli",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -30,6 +31,12 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 
+[project.scripts]
+krx-news = "krx_news_client.cli:main"
+# `uvx krx-news-client` 가 설치 없이 바로 돌도록 패키지 이름과 같은 명령도 둔다.
+krx-news-client = "krx_news_client.cli:main"
+krx-news-client-mcp = "krx_news_client.mcp_server:main"
+
 [project.urls]
 Homepage = "https://github.com/younghwan91/krx-news-client"
 Documentation = "https://github.com/younghwan91/krx-news-client/blob/main/docs/guide.md"
@@ -38,7 +45,11 @@ Issues = "https://github.com/younghwan91/krx-news-client/issues"
 Changelog = "https://github.com/younghwan91/krx-news-client/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+mcp = [
+    "mcp>=2.0,<3",
+]
 dev = [
+    "mcp>=2.0,<3",
     "pytest>=8.0",
     "pytest-asyncio>=0.24.0",
     "pytest-httpx>=0.34.0",

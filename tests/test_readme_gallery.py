@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import io
+import json
 import re
 import zipfile
 from datetime import date
@@ -16,10 +17,11 @@ from pathlib import Path
 import httpx
 import pytest
 
-from krx_news_client import DartScraper, Deduplicator, TossScraper
+from krx_news_client import DartScraper, Deduplicator, NaverNewsScraper, YonhapScraper
 from krx_news_client.scrapers.base import BaseScraper
 
 ROOT = Path(__file__).resolve().parent.parent
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 READMES = ["README.md", "README.en.md"]
 FENCE = re.compile(r"```python\n(.*?)```", re.S)
 
@@ -62,45 +64,22 @@ def _zip(name: str, body: str) -> bytes:
     return buffer.getvalue()
 
 
-def _toss_company(request: httpx.Request) -> httpx.Response:
-    items = [
-        {
-            "id": f"yna_{n}",
-            "title": f"삼성전자 기사 {n}",
-            "summary": "요약",
-            "contentText": "본문 앞부분",
-            "source": {"code": "yna", "name": "연합뉴스"},
-            "stockCodes": ["A005930"],
-            "createdAt": f"2026-11-2{n}T10:00:00",
-        }
-        for n in (5, 4, 3)
-    ]
-    page = int(request.url.params["number"])
-    size = int(request.url.params["size"])
-    body = items[:size] if page == 1 else []
-    return httpx.Response(200, json={"result": {"body": body, "lastPage": page > 1}})
-
-
-def _toss_detail(request: httpx.Request) -> httpx.Response:
-    news_id = request.url.path.rsplit("/", 1)[-1]
-    detail = {
-        "id": news_id,
-        "title": "삼성전자 기사",
-        "summarySentences": ["요약."],
-        "content": [{"type": "text", "content": "본문 전체."}],
-        "source": {"code": "yna", "name": "연합뉴스"},
-        "stockCodes": ["A005930"],
-        "createdAt": "2026-11-25T10:00:00",
-    }
-    return httpx.Response(200, json={"result": {"kr": detail}})
+def _naver_search(request: httpx.Request) -> httpx.Response:
+    payload = json.loads((FIXTURES / "naver_news.json").read_text(encoding="utf-8"))
+    start = int(request.url.params["start"])
+    display = int(request.url.params["display"])
+    items = payload["items"][start - 1 : start - 1 + display]
+    return httpx.Response(200, json={**payload, "items": items})
 
 
 @pytest.fixture
 def mocked_sources(httpx_mock, monkeypatch):
-    for cls in (BaseScraper, TossScraper):
+    for cls in (BaseScraper, YonhapScraper, NaverNewsScraper):
         monkeypatch.setattr(cls, "min_delay", 0)
         monkeypatch.setattr(cls, "max_delay", 0)
     monkeypatch.setenv("DART_API_KEY", "test-key")
+    monkeypatch.setenv("NAVER_CLIENT_ID", "test-id")
+    monkeypatch.setenv("NAVER_CLIENT_SECRET", "test-secret")
     httpx_mock.add_response(
         url=re.compile(r"https://opendart\.fss\.or\.kr/api/list\.json.*"),
         json={"status": "000", "message": "정상", "total_page": 1, "list": _dart_rows()},
@@ -113,15 +92,15 @@ def mocked_sources(httpx_mock, monkeypatch):
         is_reusable=True,
         is_optional=True,
     )
-    httpx_mock.add_callback(
-        _toss_company,
-        url=re.compile(r"https://wts-info-api\.tossinvest\.com/api/v2/news/companies/.*"),
+    httpx_mock.add_response(
+        url=re.compile(r"https://www\.yna\.co\.kr/rss/[a-z]+\.xml"),
+        content=(FIXTURES / "yonhap_market.xml").read_bytes(),
         is_reusable=True,
         is_optional=True,
     )
     httpx_mock.add_callback(
-        _toss_detail,
-        url=re.compile(r"https://wts-info-api\.tossinvest\.com/api/v2/news/[^/]+$"),
+        _naver_search,
+        url=re.compile(r"https://openapi\.naver\.com/v1/search/news\.json.*"),
         is_reusable=True,
         is_optional=True,
     )
@@ -156,19 +135,24 @@ def test_gallery_matches_across_languages():
 
 @pytest.mark.parametrize(("name", "index", "code"), GALLERY, ids=lambda v: str(v)[:20])
 async def test_gallery_snippet_runs(mocked_sources, capsys, name, index, code):
-    async with DartScraper.from_env() as dart, TossScraper() as toss:
+    async with (
+        DartScraper.from_env() as dart,
+        YonhapScraper() as yna,
+        NaverNewsScraper.from_env() as naver,
+    ):
         namespace = {
-            "dart": dart, "toss": toss, "date": date, "Deduplicator": Deduplicator,
+            "dart": dart, "yna": yna, "naver": naver, "date": date,
+            "Deduplicator": Deduplicator,
         }
         await _run(code, namespace)
     if "print(" in code:
         assert capsys.readouterr().out.strip(), f"{name} snippet {index} printed nothing"
     if "prompt" in namespace:
-        assert "본문 전체." in namespace["prompt"]
+        assert "배당 결정" in namespace["prompt"]
 
 
 @pytest.mark.parametrize("name", READMES)
 async def test_quick_start_runs(mocked_sources, capsys, name):
     await _run(_quick_start(name), {})
     out = capsys.readouterr().out
-    assert "삼성전자" in out
+    assert "KS인더스트리" in out and "['101000']" in out

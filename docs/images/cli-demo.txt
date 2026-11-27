@@ -1,0 +1,13 @@
+$ uvx krx-news-client watch -t 101000
+krx-news watch: 101000 · 연합뉴스 + DART 공시 · 60초마다
+11-26 19:49  101000 KS인더스트리, 50억원 유상증자…프라임라이트투자조합1호에 제3자배정
+             https://www.yna.co.kr/view/AKR20261126185200008
+11-27        101000 KS인더스트리  주요사항보고서(유상증자결정)
+             https://dart.fss.or.kr/dsaf001/main.do?rcept_no=20261126000966
+$ krx-news dart -k 자기주식 -n 3
+11-26        036830 솔브레인홀딩스  주요사항보고서(자기주식처분결정)(자회사의 주요경영사항)
+             https://dart.fss.or.kr/dsaf001/main.do?rcept_no=20261126900666
+11-26        065370 위세아이텍  수시공시의무관련사항(공정공시) (주주가치 제고를 위한 2026년 결산배당 확대 및 자기주식 소각 계획 안내)
+             https://dart.fss.or.kr/dsaf001/main.do?rcept_no=20261126900119
+11-26        009270 신원  자기주식취득결과보고서
+             https://dart.fss.or.kr/dsaf001/main.do?rcept_no=20261126000830

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"  xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:sy="http://purl.org/rss/1.0/modules/syndication/">
+	<channel>
+		<title><![CDATA[연합뉴스 마켓+ 최신기사]]></title>
+		<link>https://www.yna.co.kr/market-plus/all</link>
+		<atom:link href="https://www.yna.co.kr/rss/market.xml" rel="self" type="application/rss+xml" />
+		<description><![CDATA[연합뉴스 실시간 마켓+ 최신뉴스입니다]]></description>
+		<language>ko-KR</language>
+		<copyright><![CDATA[저작권자(c) 연합뉴스, 무단 전재-재배포, AI 학습 및 활용 금지]]></copyright>
+		<sy:updatePeriod>hourly</sy:updatePeriod>
+		<sy:updateFrequency>1</sy:updateFrequency>
+		<lastBuildDate>Thu, 26 Nov 2026 19:49:41 +0900</lastBuildDate>
+		<pubDate>Thu, 26 Nov 2026 19:49:41 +0900</pubDate>
+				<item>
+			<title><![CDATA[KS인더스트리, 50억원 유상증자…프라임라이트투자조합1호에 제3자배정]]></title>
+			<link>https://www.yna.co.kr/view/AKR20261126185200008</link>
+			<guid isPermaLink="true">https://www.yna.co.kr/view/AKR20261126185200008</guid>
+			<pubDate>Thu, 26 Nov 2026 19:49:41 +0900</pubDate>
+			<dc:creator>증권부</dc:creator>
+			<description><![CDATA[(서울=연합뉴스) 코스닥 상장사 KS인더스트리[101000]는 제3자배정 유상증자를 결정했다고 공시했다...]]></description>
+		</item>
+		<item>
+			<title><![CDATA[에이피알, 브랜드501 주식 700억원 규모 취득…"경영권 확보"(종합)]]></title>
+			<link>https://www.yna.co.kr/view/AKR20261126162651008</link>
+			<guid isPermaLink="true">https://www.yna.co.kr/view/AKR20261126162651008</guid>
+			<pubDate>Thu, 26 Nov 2026 17:18:43 +0900</pubDate>
+			<dc:creator>이상서</dc:creator>
+			<description><![CDATA[(서울=연합뉴스) 에이피알[278470]은 브랜드501 주식을 취득한다고 공시했다...]]></description>
+		</item>
+		<item>
+			<title><![CDATA[삼성카드, 배당성향 50%로 높인다…자사주 소각도 추진]]></title>
+			<link>https://www.yna.co.kr/view/AKR20261126170400002</link>
+			<guid isPermaLink="true">https://www.yna.co.kr/view/AKR20261126170400002</guid>
+			<pubDate>Thu, 26 Nov 2026 17:13:03 +0900</pubDate>
+			<dc:creator>김지연</dc:creator>
+			<description><![CDATA[(서울=연합뉴스) 삼성카드[029780]는 배당성향을 높이고 자사주 소각을 추진한다...]]></description>
+		</item>
+		<item>
+			<title><![CDATA[자본시장개혁기구 수장에 메리츠 김용범…민간에 전권 부여(종합)]]></title>
+			<link>https://www.yna.co.kr/view/AKR20261126171651002</link>
+			<guid isPermaLink="true">https://www.yna.co.kr/view/AKR20261126171651002</guid>
+			<pubDate>Thu, 26 Nov 2026 18:54:07 +0900</pubDate>
+			<dc:creator>배영경</dc:creator>
+			<description><![CDATA[(서울=연합뉴스) 정부가 자본시장 개혁기구 수장을 정했다...]]></description>
+		</item>
+	</channel>
+</rss>
