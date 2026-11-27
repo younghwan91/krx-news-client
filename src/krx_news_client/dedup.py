@@ -41,6 +41,8 @@ class Deduplicator(Generic[T]):
         key: Callable[[T], Hashable] = default_key,  # type: ignore[assignment]
         max_size: int = 50_000,
     ) -> None:
+        if max_size < 1:
+            raise ValueError(f"max_size 는 1 이상이어야 합니다: {max_size}")
         self._key = key
         self._max_size = max_size
         self._seen: OrderedDict[Hashable, None] = OrderedDict()
