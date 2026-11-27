@@ -60,7 +60,7 @@ uvx krx-news-client                         # 연합뉴스 마켓+ 최신 기사
 uvx krx-news-client watch -t 005930 000660  # 관심 종목의 새 기사·공시가 뜰 때마다 한 줄씩
 ```
 
-`pip install krx-news-client`로 설치했다면 같은 명령을 `krx-news`로 씁니다. PyPI 최신(0.5.1)에는 아직 CLI가 없고 main에만 있습니다. 그 전까지는 `uvx --from git+https://github.com/younghwan91/krx-news-client krx-news`로 실행하세요.
+`pip install krx-news-client`(0.6.0 이상)로 설치했다면 같은 명령을 `krx-news`로 씁니다.
 
 | 명령 | 하는 일 | 키 |
 |---|---|---|
