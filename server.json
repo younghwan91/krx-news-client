@@ -8,19 +8,19 @@
     "source": "github"
   },
   "websiteUrl": "https://github.com/younghwan91/krx-news-client#ai-agents-mcp",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "krx-news-client",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "runtimeHint": "uvx",
       "runtimeArguments": [
         {
           "type": "named",
           "name": "--from",
-          "value": "krx-news-client[mcp]==0.6.0"
+          "value": "krx-news-client[mcp]==0.6.1"
         }
       ],
       "transport": {

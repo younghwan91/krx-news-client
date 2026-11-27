@@ -1,6 +1,6 @@
 [project]
 name = "krx-news-client"
-version = "0.6.0"
+version = "0.6.1"
 description = "한국 증시 뉴스·DART 공시 Python 클라이언트 + 터미널 CLI + AI 에이전트용 MCP 서버 (DART·연합뉴스 RSS·네이버 검색 API)"
 readme = "README.md"
 license = { text = "Apache-2.0" }

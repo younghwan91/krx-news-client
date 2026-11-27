@@ -72,6 +72,8 @@ After `pip install krx-news-client` (0.6.0 or later) the same command is `krx-ne
 
 ## AI Agents (MCP)
 
+<!-- mcp-name: io.github.younghwan91/krx-news-client (MCP registry PyPI ownership check, see server.json) -->
+
 An MCP server lets agents such as Claude or Cursor find DART filings and **read the filing text itself**, not just the list API, so the agent can check what was actually decided.
 
 ```bash
